@@ -49,6 +49,7 @@ class Lecture(Base):
     number: Mapped[int] = mapped_column(unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String(256), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    topics: Mapped[str | None] = mapped_column(Text, nullable=True)
     scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     format: Mapped[LectureFormat] = mapped_column(
         Enum(

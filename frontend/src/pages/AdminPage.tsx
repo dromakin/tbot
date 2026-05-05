@@ -320,6 +320,17 @@ export function AdminPage(): JSX.Element {
     });
   };
 
+  const handleSaveTopics = async (lectureId: number, topics: string | null) => {
+    await withBusy(async () => {
+      await apiFetch<LectureOut>(`/api/lectures/${lectureId}/topics`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics }),
+      });
+      await loadLectures();
+    });
+  };
+
   const handleSaveGeneralMaterials = async (url: string | null) => {
     await withBusy(async () => {
       const payload = url && url.trim() ? url.trim() : null;
@@ -501,6 +512,7 @@ export function AdminPage(): JSX.Element {
           onToggleRegistration={handleToggleRegistration}
           onSaveMaterials={handleSaveMaterials}
           onSaveStream={handleSaveStream}
+          onSaveTopics={handleSaveTopics}
           onSelectForRegistrations={(lectureId) => {
             void handleSelectRegistrations(lectureId);
           }}

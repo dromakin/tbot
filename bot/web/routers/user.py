@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from bot.db.models import ClickEventType, LectureFormat
 from bot.db.repository import Repository
+from bot.services.program import build_program_payload
 from bot.text_store import t
 from bot.web.auth import VerifiedTmaUser
 from bot.web.deps import get_current_user, get_repo
@@ -213,8 +214,15 @@ async def get_user_registrations(
 @router.get("/static", response_model=UserStaticOut)
 async def get_user_static(
     _current_user: VerifiedTmaUser = Depends(get_user_or_403),
+    repo: Repository = Depends(get_repo),
 ) -> UserStaticOut:
+    lectures = await repo.list_lectures()
+    program_header, program_lectures = build_program_payload(
+        header=t("menu", "program_header"),
+        lectures=lectures,
+    )
     return UserStaticOut(
-        program_text=t("menu", "program_text"),
+        program_header=program_header,
+        program_lectures=program_lectures,
         contact_text=t("contact", "text"),
     )

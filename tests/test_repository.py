@@ -362,3 +362,26 @@ async def test_course_overview(repo: Repository) -> None:
     assert open_row.registrations == 2
     assert open_row.stream_link_unique == 2
     assert open_row.attendance_rate == 100.0
+
+
+@pytest.mark.asyncio
+async def test_set_topics_updates_lecture(repo: Repository) -> None:
+    lecture = await repo.create_lecture(
+        number=91,
+        title="Topics lecture",
+        description="desc",
+        topics=None,
+        scheduled_at=datetime(2026, 7, 1, 10, 0, tzinfo=timezone.utc),
+        lecture_format=LectureFormat.ONLINE,
+        registration_open=False,
+    )
+
+    ok = await repo.set_topics(
+        lecture.id,
+        "1. Первая тема\n2. Вторая тема",
+    )
+    assert ok is True
+
+    updated = await repo.get_lecture(lecture.id)
+    assert updated is not None
+    assert updated.topics == "1. Первая тема\n2. Вторая тема"

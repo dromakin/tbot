@@ -231,6 +231,7 @@ class Repository:
         number: int,
         title: str,
         description: str,
+        topics: str | None = None,
         scheduled_at: datetime,
         lecture_format: LectureFormat,
         stream_url: str | None = None,
@@ -241,6 +242,7 @@ class Repository:
             number=number,
             title=title,
             description=description,
+            topics=topics,
             scheduled_at=scheduled_at,
             format=lecture_format,
             stream_url=stream_url,
@@ -304,6 +306,14 @@ class Repository:
         if lecture is None:
             return False
         lecture.materials_url = materials_url
+        await self.session.commit()
+        return True
+
+    async def set_topics(self, lecture_id: int, topics: str | None) -> bool:
+        lecture = await self.session.get(Lecture, lecture_id)
+        if lecture is None:
+            return False
+        lecture.topics = topics
         await self.session.commit()
         return True
 

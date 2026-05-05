@@ -88,6 +88,7 @@ async def test_web_api_me_and_lectures_flow() -> None:
             "number": 999,
             "title": "Mini App Lecture",
             "description": "Created from API",
+            "topics": "1. Topic one\n2. Topic two",
             "scheduled_at": "2026-12-01T10:00:00+00:00",
             "format": "online",
             "stream_url": "https://telemost.yandex.ru/j/example",
@@ -110,6 +111,14 @@ async def test_web_api_me_and_lectures_flow() -> None:
         )
         assert patched_stream.status_code == 200
         assert patched_stream.json()["stream_url"] == "https://example.com/new-stream"
+
+        patched_topics = await client.patch(
+            f"/api/lectures/{lecture_id}/topics",
+            headers=admin_header,
+            json={"topics": "1. Updated topic"},
+        )
+        assert patched_topics.status_code == 200
+        assert patched_topics.json()["topics"] == "1. Updated topic"
 
         forbidden = await client.get("/api/lectures", headers=user_header)
         assert forbidden.status_code == 403

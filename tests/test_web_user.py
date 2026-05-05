@@ -62,6 +62,7 @@ async def test_user_api_flow() -> None:
             number=501,
             title="User lecture",
             description="for user api",
+            topics="1. Тема из БД\n2. Еще тема",
             scheduled_at=datetime(2026, 12, 2, 10, 0, tzinfo=timezone.utc),
             lecture_format=LectureFormat.ONLINE,
             stream_url="https://telemost.yandex.ru/j/user",
@@ -107,7 +108,10 @@ async def test_user_api_flow() -> None:
 
         static_content = await client.get("/api/user/static", headers=user_header)
         assert static_content.status_code == 200
-        assert "program_text" in static_content.json()
-        assert "contact_text" in static_content.json()
+        payload = static_content.json()
+        assert payload["program_header"]
+        assert "contact_text" in payload
+        assert payload["program_lectures"]
+        assert payload["program_lectures"][0]["topics"] == ["1. Тема из БД", "2. Еще тема"]
 
     await engine.dispose()

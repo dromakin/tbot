@@ -22,6 +22,7 @@ class LectureOut(BaseModel):
     number: int
     title: str
     description: str | None
+    topics: str | None
     scheduled_at: datetime
     format: LectureFormat
     stream_url: str | None
@@ -33,6 +34,7 @@ class LectureCreateIn(BaseModel):
     number: int
     title: str
     description: str = ""
+    topics: str | None = None
     scheduled_at: datetime
     format: LectureFormat
     stream_url: str | None = None
@@ -50,6 +52,10 @@ class LectureMaterialsIn(BaseModel):
 
 class LectureStreamIn(BaseModel):
     stream_url: str | None = None
+
+
+class LectureTopicsIn(BaseModel):
+    topics: str | None = None
 
 
 class GeneralMaterialsSettingOut(BaseModel):
@@ -228,6 +234,13 @@ class UserActionOut(BaseModel):
     url: str | None = None
 
 
+class ProgramLectureOut(BaseModel):
+    number: int
+    title: str
+    topics: list[str]
+
+
 class UserStaticOut(BaseModel):
-    program_text: str
+    program_header: str
+    program_lectures: list[ProgramLectureOut]
     contact_text: str

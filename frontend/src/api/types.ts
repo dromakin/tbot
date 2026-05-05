@@ -10,6 +10,7 @@ export type LectureOut = {
   number: number;
   title: string;
   description: string | null;
+  topics: string | null;
   scheduled_at: string;
   format: 'online' | 'offline';
   stream_url: string | null;
@@ -161,6 +162,7 @@ export type LectureCreateIn = {
   number: number;
   title: string;
   description: string;
+  topics: string | null;
   scheduled_at: string;
   format: 'online' | 'offline';
   stream_url: string | null;
@@ -170,6 +172,10 @@ export type LectureCreateIn = {
 
 export type LectureStreamIn = {
   stream_url: string | null;
+};
+
+export type LectureTopicsIn = {
+  topics: string | null;
 };
 
 export type GeneralMaterialsSettingOut = {
@@ -217,6 +223,11 @@ export type UserActionOut = {
 };
 
 export type UserStaticOut = {
-  program_text: string;
+  program_header: string;
+  program_lectures: {
+    number: number;
+    title: string;
+    topics: string[];
+  }[];
   contact_text: string;
 };
