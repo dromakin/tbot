@@ -5,7 +5,7 @@ from bot.config import Settings
 from bot.db.models import ClickEventType
 from bot.db.repository import Repository
 from bot.keyboards.inline import LectureCallback, MenuCallback, back_to_menu_keyboard, materials_keyboard
-from bot.texts import MATERIALS_TEXT
+from bot.text_store import t
 
 router = Router(name="materials")
 
@@ -15,8 +15,8 @@ async def materials_menu_handler(callback: CallbackQuery, repo: Repository, sett
     lectures = await repo.list_lectures()
     if callback.message is not None:
         await callback.message.answer(
-            MATERIALS_TEXT,
-            reply_markup=materials_keyboard(lectures, settings.general_materials_url),
+            t("materials", "intro"),
+            reply_markup=materials_keyboard(lectures),
         )
     await callback.answer()
 
@@ -37,7 +37,7 @@ async def materials_general_handler(callback: CallbackQuery, repo: Repository, s
         lecture_id=None,
     )
     await callback.message.answer(
-        f"📚 Основные материалы курса:\n{settings.general_materials_url}",
+        t("materials", "general_url", general_materials_url=settings.general_materials_url),
         reply_markup=back_to_menu_keyboard(),
     )
     await callback.answer()
@@ -60,14 +60,14 @@ async def materials_for_lecture_handler(
 
     lecture = await repo.get_lecture(callback_data.lecture_id)
     if lecture is None or not lecture.materials_url:
-        await callback.message.answer("Материалы для этой лекции пока недоступны.", reply_markup=back_to_menu_keyboard())
+        await callback.message.answer(t("materials", "unavailable"), reply_markup=back_to_menu_keyboard())
         await callback.answer()
         return
 
     is_registered = await repo.is_registered(callback.from_user.id, lecture.id)
     if not is_registered:
         await callback.message.answer(
-            "Вы не регистрировались на лекцию!\n\nДоп.материал вам не доступен!",
+            t("materials", "not_registered"),
             reply_markup=back_to_menu_keyboard(),
         )
         await callback.answer()
@@ -79,7 +79,7 @@ async def materials_for_lecture_handler(
         lecture_id=lecture.id,
     )
     await callback.message.answer(
-        f"✅ <b>Вы были зарегистрированы!</b>\n\nДоп. материал доступен по ссылке: {lecture.materials_url}",
+        t("materials", "lecture_url", materials_url=lecture.materials_url),
         reply_markup=back_to_menu_keyboard(),
     )
     await callback.answer()

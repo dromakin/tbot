@@ -6,8 +6,9 @@ from aiogram import Bot
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from bot.db.repository import Repository
-from bot.services.export import build_stats_csv
+from bot.services.export import build_export_zip, build_stats_csv
 from bot.db.models import ClickEventType, QuestionStatus
+from bot.text_store import t
 from bot.web.auth import VerifiedTmaUser
 from bot.web.deps import get_bot, get_repo, require_admin
 from bot.web.schemas import (
@@ -402,7 +403,7 @@ async def moderate_question(
             try:
                 await bot.send_message(
                     question.user_id,
-                    f"✉️ Ответ на ваш вопрос:\n\n{answer_text}",
+                    t("qa", "web_answer", answer_text=answer_text),
                 )
             except Exception as exc:  # pragma: no cover - network dependent
                 raise HTTPException(
@@ -426,4 +427,38 @@ async def export_csv(
         content=csv_bytes,
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="stats.csv"'},
+    )
+
+
+@router.get("/export.zip")
+async def export_zip(
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> Response:
+    registrations = await repo.get_export_rows()
+    click_events = await repo.iter_click_events_raw()
+    clicks_per_lecture = await repo.get_lecture_click_stats()
+    clicks_per_user = await repo.get_clicks_per_user()
+    attendance_lectures, attendance_rows = await repo.get_attendance_matrix()
+    users = await repo.list_users()
+
+    funnel_per_lecture = []
+    for lecture_row in clicks_per_lecture:
+        funnel_row = await repo.get_lecture_funnel(lecture_row.lecture_id)
+        funnel_per_lecture.append((lecture_row, funnel_row))
+
+    zip_bytes = build_export_zip(
+        registrations=registrations,
+        click_events=click_events,
+        clicks_per_lecture=clicks_per_lecture,
+        clicks_per_user=clicks_per_user,
+        attendance_lectures=attendance_lectures,
+        attendance_rows=attendance_rows,
+        funnel_per_lecture=funnel_per_lecture,
+        users=users,
+    )
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="stats_bundle.zip"'},
     )

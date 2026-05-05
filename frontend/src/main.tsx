@@ -6,15 +6,13 @@ import { AdminPage } from './pages/AdminPage';
 import { UserPage } from './pages/UserPage';
 import './styles.css';
 
-const userPageEnabled = import.meta.env.VITE_USER_PAGE_ENABLED === 'true';
-
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={userPageEnabled ? <UserPage /> : <Navigate to="/admin" replace />} />
+        <Route path="/" element={<UserPage />} />
         <Route path="/admin" element={<AdminPage />} />
-        <Route path="*" element={<Navigate to={userPageEnabled ? '/' : '/admin'} replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,

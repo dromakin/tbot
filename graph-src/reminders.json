@@ -1,0 +1,4 @@
+{
+  "base": "⏰ Напоминание о лекции №{lecture_number}\n<b>{lecture_title}</b>\n\nНачало: {scheduled_at}\nПроверьте регистрацию и подключение заранее.",
+  "with_link": "{base_text}\n\nСсылка для подключения: {stream_url}"
+}

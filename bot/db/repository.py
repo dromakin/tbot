@@ -159,6 +159,48 @@ class LectureOverviewRow:
     sparkline: list[LectureOverviewSparklinePointRow]
 
 
+@dataclass(slots=True)
+class ClickEventRawRow:
+    event_id: int
+    tg_user_id: int
+    username: str | None
+    full_name: str
+    lecture_id: int | None
+    lecture_number: int | None
+    lecture_title: str | None
+    event_type: ClickEventType
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class ClicksPerUserRow:
+    tg_user_id: int
+    username: str | None
+    full_name: str
+    stream_link_clicks: int
+    materials_general_clicks: int
+    materials_lecture_clicks: int
+    registration_clicks: int
+    total_clicks: int
+
+
+@dataclass(slots=True)
+class AttendanceMatrixRow:
+    tg_user_id: int
+    username: str | None
+    full_name: str
+    by_lecture_id: dict[int, int]
+
+
+@dataclass(slots=True)
+class UserExportRow:
+    tg_user_id: int
+    username: str | None
+    full_name: str
+    first_seen_at: datetime
+    last_seen_at: datetime
+
+
 class Repository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -937,6 +979,146 @@ class Repository:
                 )
             )
         return rows
+
+    async def iter_click_events_raw(self) -> list[ClickEventRawRow]:
+        stmt = (
+            select(
+                ClickEvent.id,
+                ClickEvent.user_id,
+                User.username,
+                User.full_name,
+                ClickEvent.lecture_id,
+                Lecture.number,
+                Lecture.title,
+                ClickEvent.event_type,
+                ClickEvent.created_at,
+            )
+            .join(User, User.tg_user_id == ClickEvent.user_id)
+            .outerjoin(Lecture, Lecture.id == ClickEvent.lecture_id)
+            .order_by(ClickEvent.created_at.asc(), ClickEvent.id.asc())
+        )
+        result = await self.session.execute(stmt)
+        return [
+            ClickEventRawRow(
+                event_id=int(row[0]),
+                tg_user_id=int(row[1]),
+                username=row[2],
+                full_name=row[3],
+                lecture_id=int(row[4]) if row[4] is not None else None,
+                lecture_number=int(row[5]) if row[5] is not None else None,
+                lecture_title=row[6],
+                event_type=row[7],
+                created_at=row[8],
+            )
+            for row in result.all()
+        ]
+
+    async def get_clicks_per_user(self) -> list[ClicksPerUserRow]:
+        stream_sum = func.sum(case((ClickEvent.event_type == ClickEventType.STREAM_LINK, 1), else_=0))
+        materials_general_sum = func.sum(
+            case((ClickEvent.event_type == ClickEventType.MATERIALS_GENERAL, 1), else_=0)
+        )
+        materials_lecture_sum = func.sum(
+            case((ClickEvent.event_type == ClickEventType.MATERIALS_LECTURE, 1), else_=0)
+        )
+        registration_sum = func.sum(
+            case((ClickEvent.event_type == ClickEventType.REGISTRATION_CLICK, 1), else_=0)
+        )
+        total_sum = func.count(ClickEvent.id)
+
+        stmt = (
+            select(
+                User.tg_user_id,
+                User.username,
+                User.full_name,
+                func.coalesce(stream_sum, 0),
+                func.coalesce(materials_general_sum, 0),
+                func.coalesce(materials_lecture_sum, 0),
+                func.coalesce(registration_sum, 0),
+                func.coalesce(total_sum, 0),
+            )
+            .join(ClickEvent, ClickEvent.user_id == User.tg_user_id)
+            .group_by(User.tg_user_id, User.username, User.full_name)
+            .order_by(total_sum.desc(), User.tg_user_id.asc())
+        )
+        result = await self.session.execute(stmt)
+        return [
+            ClicksPerUserRow(
+                tg_user_id=int(row[0]),
+                username=row[1],
+                full_name=row[2],
+                stream_link_clicks=int(row[3]),
+                materials_general_clicks=int(row[4]),
+                materials_lecture_clicks=int(row[5]),
+                registration_clicks=int(row[6]),
+                total_clicks=int(row[7]),
+            )
+            for row in result.all()
+        ]
+
+    async def get_attendance_matrix(self) -> tuple[list[Lecture], list[AttendanceMatrixRow]]:
+        lectures = await self.list_lectures()
+        lecture_ids = [lecture.id for lecture in lectures]
+
+        users_stmt = (
+            select(User.tg_user_id, User.username, User.full_name)
+            .join(Registration, Registration.user_id == User.tg_user_id)
+            .distinct()
+            .order_by(User.tg_user_id.asc())
+        )
+        users_result = await self.session.execute(users_stmt)
+
+        stream_pairs_result = await self.session.execute(
+            select(ClickEvent.user_id, ClickEvent.lecture_id)
+            .where(
+                ClickEvent.event_type == ClickEventType.STREAM_LINK,
+                ClickEvent.lecture_id.is_not(None),
+            )
+            .distinct()
+        )
+        attended_pairs = {
+            (int(row[0]), int(row[1]))
+            for row in stream_pairs_result.all()
+            if row[0] is not None and row[1] is not None
+        }
+
+        rows: list[AttendanceMatrixRow] = []
+        for user_row in users_result.all():
+            tg_user_id = int(user_row[0])
+            by_lecture_id = {
+                lecture_id: 1 if (tg_user_id, lecture_id) in attended_pairs else 0
+                for lecture_id in lecture_ids
+            }
+            rows.append(
+                AttendanceMatrixRow(
+                    tg_user_id=tg_user_id,
+                    username=user_row[1],
+                    full_name=user_row[2],
+                    by_lecture_id=by_lecture_id,
+                )
+            )
+        return lectures, rows
+
+    async def list_users(self) -> list[UserExportRow]:
+        result = await self.session.execute(
+            select(
+                User.tg_user_id,
+                User.username,
+                User.full_name,
+                User.first_seen_at,
+                User.last_seen_at,
+            ).order_by(User.tg_user_id.asc())
+        )
+        return [
+            UserExportRow(
+                tg_user_id=int(row[0]),
+                username=row[1],
+                full_name=row[2],
+                first_seen_at=row[3],
+                last_seen_at=row[4],
+            )
+            for row in result.all()
+        ]
 
     async def get_export_rows(self) -> list[ExportRow]:
         clicks_agg = (

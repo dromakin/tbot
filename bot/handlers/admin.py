@@ -11,8 +11,9 @@ from aiogram.types import BufferedInputFile, Message
 from bot.config import Settings
 from bot.db.models import LectureFormat
 from bot.db.repository import Repository
-from bot.services.export import build_stats_csv
+from bot.services.export import build_export_zip, build_stats_csv
 from bot.states import CreateLectureState
+from bot.text_store import t
 
 router = Router(name="admin")
 
@@ -28,7 +29,7 @@ def _display_nickname(username: str | None) -> str:
 async def _ensure_admin(message: Message, settings: Settings) -> bool:
     user_id = message.from_user.id if message.from_user else None
     if not _is_admin(user_id, settings):
-        await message.answer("Команда доступна только администраторам.")
+        await message.answer(t("admin", "admin_only"))
         return False
     return True
 
@@ -37,19 +38,7 @@ async def _ensure_admin(message: Message, settings: Settings) -> bool:
 async def admin_help_handler(message: Message, settings: Settings) -> None:
     if not await _ensure_admin(message, settings):
         return
-    await message.answer(
-        "Админ-команды:\n"
-        "/create_lecture - создать лекцию через FSM\n"
-        "/lectures - список лекций\n"
-        "/delete_lecture <lecture_id>\n"
-        "/open_registration <lecture_id>\n"
-        "/close_registration <lecture_id>\n"
-        "/set_stream <lecture_id> <url>\n"
-        "/set_materials <lecture_id> <url>\n"
-        "/lecture_registrations <lecture_id> - список регистраций\n"
-        "/stats - краткая статистика\n"
-        "/export_csv - выгрузка статистики"
-    )
+    await message.answer(t("admin", "help"))
 
 
 @router.message(Command("lectures"))
@@ -58,15 +47,22 @@ async def list_lectures_handler(message: Message, settings: Settings, repo: Repo
         return
     lectures = await repo.list_lectures()
     if not lectures:
-        await message.answer("Лекций пока нет.")
+        await message.answer(t("admin", "lectures_empty"))
         return
 
-    lines = ["Список лекций:"]
+    lines = [t("admin", "lectures_header")]
     for lecture in lectures:
         lines.append(
-            f"[id={lecture.id}] №{lecture.number} {lecture.title} | "
-            f"{lecture.scheduled_at.strftime('%d.%m.%Y %H:%M')} | "
-            f"format={lecture.format.value} | reg_open={lecture.registration_open}"
+            t(
+                "admin",
+                "lectures_item",
+                lecture_id=lecture.id,
+                lecture_number=lecture.number,
+                lecture_title=lecture.title,
+                scheduled_at=lecture.scheduled_at.strftime("%d.%m.%Y %H:%M"),
+                lecture_format=lecture.format.value,
+                registration_open=lecture.registration_open,
+            )
         )
     await message.answer("\n".join(lines))
 
@@ -78,27 +74,34 @@ async def lecture_registrations_handler(message: Message, settings: Settings, re
 
     parts = (message.text or "").split(maxsplit=1)
     if len(parts) < 2 or not parts[1].isdigit():
-        await message.answer("Использование: /lecture_registrations <lecture_id>")
+        await message.answer(t("admin", "lecture_registrations_usage"))
         return
 
     lecture_id = int(parts[1])
     rows = await repo.list_lecture_registration_rows(lecture_id)
     if not rows:
-        await message.answer("Регистраций нет.")
+        await message.answer(t("admin", "lecture_registrations_empty"))
         return
 
     lines = [
-        (
-            f"[id={row.tg_user_id}] {_display_nickname(row.username)} | "
-            f"{row.full_name} | "
-            f"{row.registered_at.strftime('%d.%m.%Y %H:%M')} | "
-            f"clicks={row.clicks_count}"
+        t(
+            "admin",
+            "lecture_registrations_item",
+            tg_user_id=row.tg_user_id,
+            nickname=_display_nickname(row.username),
+            full_name=row.full_name,
+            registered_at=row.registered_at.strftime("%d.%m.%Y %H:%M"),
+            clicks_count=row.clicks_count,
         )
         for row in rows
     ]
     chunk_size = 50
     for index in range(0, len(lines), chunk_size):
-        header = f"Регистрации (snapshot профиля) для lecture_id={lecture_id}:\n" if index == 0 else ""
+        header = (
+            t("admin", "lecture_registrations_header", lecture_id=lecture_id) + "\n"
+            if index == 0
+            else ""
+        )
         await message.answer(header + "\n".join(lines[index : index + chunk_size]))
 
 
@@ -108,10 +111,10 @@ async def delete_lecture_handler(message: Message, settings: Settings, repo: Rep
         return
     parts = (message.text or "").split(maxsplit=1)
     if len(parts) < 2 or not parts[1].isdigit():
-        await message.answer("Использование: /delete_lecture <lecture_id>")
+        await message.answer(t("admin", "delete_lecture_usage"))
         return
     ok = await repo.delete_lecture(int(parts[1]))
-    await message.answer("Лекция удалена." if ok else "Лекция не найдена.")
+    await message.answer(t("admin", "lecture_deleted") if ok else t("admin", "lecture_not_found"))
 
 
 async def _set_registration(message: Message, settings: Settings, repo: Repository, value: bool) -> None:
@@ -119,14 +122,15 @@ async def _set_registration(message: Message, settings: Settings, repo: Reposito
         return
     parts = (message.text or "").split(maxsplit=1)
     if len(parts) < 2 or not parts[1].isdigit():
-        cmd = "/open_registration" if value else "/close_registration"
-        await message.answer(f"Использование: {cmd} <lecture_id>")
+        await message.answer(
+            t("admin", "open_registration_usage" if value else "close_registration_usage")
+        )
         return
     ok = await repo.set_registration_open(int(parts[1]), value)
     if not ok:
-        await message.answer("Лекция не найдена.")
+        await message.answer(t("admin", "lecture_not_found"))
         return
-    await message.answer("Готово.")
+    await message.answer(t("admin", "done"))
 
 
 @router.message(Command("open_registration"))
@@ -145,10 +149,10 @@ async def set_stream_handler(message: Message, settings: Settings, repo: Reposit
         return
     parts = (message.text or "").split(maxsplit=2)
     if len(parts) < 3 or not parts[1].isdigit():
-        await message.answer("Использование: /set_stream <lecture_id> <url>")
+        await message.answer(t("admin", "set_stream_usage"))
         return
     ok = await repo.set_stream_url(int(parts[1]), parts[2])
-    await message.answer("Ссылка обновлена." if ok else "Лекция не найдена.")
+    await message.answer(t("admin", "link_updated") if ok else t("admin", "lecture_not_found"))
 
 
 @router.message(Command("set_materials"))
@@ -157,10 +161,10 @@ async def set_materials_handler(message: Message, settings: Settings, repo: Repo
         return
     parts = (message.text or "").split(maxsplit=2)
     if len(parts) < 3 or not parts[1].isdigit():
-        await message.answer("Использование: /set_materials <lecture_id> <url>")
+        await message.answer(t("admin", "set_materials_usage"))
         return
     ok = await repo.set_materials_url(int(parts[1]), parts[2])
-    await message.answer("Ссылка обновлена." if ok else "Лекция не найдена.")
+    await message.answer(t("admin", "link_updated") if ok else t("admin", "lecture_not_found"))
 
 
 @router.message(Command("stats"))
@@ -169,15 +173,20 @@ async def stats_handler(message: Message, settings: Settings, repo: Repository) 
         return
     rows = await repo.get_stats()
     if not rows:
-        await message.answer("Статистики пока нет.")
+        await message.answer(t("admin", "stats_empty"))
         return
-    lines = ["Статистика по лекциям:"]
+    lines = [t("admin", "stats_header")]
     for row in rows:
         lines.append(
-            f"№{row.lecture_number} {row.lecture_title}\n"
-            f"  зарегистрировано: {row.registrations_count}\n"
-            f"  уникальных кликов: {row.unique_clicks_count}\n"
-            f"  всего кликов: {row.total_clicks_count}"
+            t(
+                "admin",
+                "stats_item",
+                lecture_number=row.lecture_number,
+                lecture_title=row.lecture_title,
+                registrations_count=row.registrations_count,
+                unique_clicks_count=row.unique_clicks_count,
+                total_clicks_count=row.total_clicks_count,
+            )
         )
     await message.answer("\n".join(lines))
 
@@ -189,7 +198,38 @@ async def export_csv_handler(message: Message, settings: Settings, repo: Reposit
     rows = await repo.get_export_rows()
     csv_bytes = build_stats_csv(rows)
     file = BufferedInputFile(csv_bytes, filename="stats.csv")
-    await message.answer_document(file, caption="Экспорт статистики по лекциям")
+    await message.answer_document(file, caption=t("admin", "export_csv_caption"))
+
+
+@router.message(Command("export_zip"))
+async def export_zip_handler(message: Message, settings: Settings, repo: Repository) -> None:
+    if not await _ensure_admin(message, settings):
+        return
+
+    registrations = await repo.get_export_rows()
+    click_events = await repo.iter_click_events_raw()
+    clicks_per_lecture = await repo.get_lecture_click_stats()
+    clicks_per_user = await repo.get_clicks_per_user()
+    attendance_lectures, attendance_rows = await repo.get_attendance_matrix()
+    users = await repo.list_users()
+
+    funnel_per_lecture = []
+    for lecture_row in clicks_per_lecture:
+        funnel_row = await repo.get_lecture_funnel(lecture_row.lecture_id)
+        funnel_per_lecture.append((lecture_row, funnel_row))
+
+    zip_bytes = build_export_zip(
+        registrations=registrations,
+        click_events=click_events,
+        clicks_per_lecture=clicks_per_lecture,
+        clicks_per_user=clicks_per_user,
+        attendance_lectures=attendance_lectures,
+        attendance_rows=attendance_rows,
+        funnel_per_lecture=funnel_per_lecture,
+        users=users,
+    )
+    file = BufferedInputFile(zip_bytes, filename="stats_bundle.zip")
+    await message.answer_document(file, caption=t("admin", "export_zip_caption"))
 
 
 @router.message(Command("create_lecture"))
@@ -198,32 +238,32 @@ async def create_lecture_start_handler(message: Message, settings: Settings, sta
         return
     await state.clear()
     await state.set_state(CreateLectureState.waiting_number)
-    await message.answer("Введите номер лекции (целое число):")
+    await message.answer(t("admin", "create_lecture.ask_number"))
 
 
 @router.message(CreateLectureState.waiting_number)
 async def create_lecture_number_handler(message: Message, state: FSMContext) -> None:
     text = (message.text or "").strip()
     if not text.isdigit():
-        await message.answer("Номер должен быть целым числом. Попробуйте снова:")
+        await message.answer(t("admin", "create_lecture.invalid_number"))
         return
     await state.update_data(number=int(text))
     await state.set_state(CreateLectureState.waiting_title)
-    await message.answer("Введите название лекции:")
+    await message.answer(t("admin", "create_lecture.ask_title"))
 
 
 @router.message(CreateLectureState.waiting_title)
 async def create_lecture_title_handler(message: Message, state: FSMContext) -> None:
     await state.update_data(title=(message.text or "").strip())
     await state.set_state(CreateLectureState.waiting_description)
-    await message.answer("Введите описание лекции:")
+    await message.answer(t("admin", "create_lecture.ask_description"))
 
 
 @router.message(CreateLectureState.waiting_description)
 async def create_lecture_description_handler(message: Message, state: FSMContext) -> None:
     await state.update_data(description=(message.text or "").strip())
     await state.set_state(CreateLectureState.waiting_datetime)
-    await message.answer("Введите дату и время в формате YYYY-MM-DD HH:MM:")
+    await message.answer(t("admin", "create_lecture.ask_datetime"))
 
 
 @router.message(CreateLectureState.waiting_datetime)
@@ -233,23 +273,23 @@ async def create_lecture_datetime_handler(message: Message, state: FSMContext, s
         dt_naive = datetime.strptime(text, "%Y-%m-%d %H:%M")
         dt = dt_naive.replace(tzinfo=ZoneInfo(settings.tz))
     except ValueError:
-        await message.answer("Неверный формат. Используйте YYYY-MM-DD HH:MM:")
+        await message.answer(t("admin", "create_lecture.invalid_datetime"))
         return
 
     await state.update_data(scheduled_at=dt)
     await state.set_state(CreateLectureState.waiting_format)
-    await message.answer("Введите формат: online или offline")
+    await message.answer(t("admin", "create_lecture.ask_format"))
 
 
 @router.message(CreateLectureState.waiting_format)
 async def create_lecture_format_handler(message: Message, state: FSMContext) -> None:
     text = (message.text or "").strip().lower()
     if text not in {LectureFormat.ONLINE.value, LectureFormat.OFFLINE.value}:
-        await message.answer("Введите online или offline")
+        await message.answer(t("admin", "create_lecture.invalid_format"))
         return
     await state.update_data(lecture_format=text)
     await state.set_state(CreateLectureState.waiting_stream_url)
-    await message.answer("Введите stream_url (или '-' если нет):")
+    await message.answer(t("admin", "create_lecture.ask_stream_url"))
 
 
 @router.message(CreateLectureState.waiting_stream_url)
@@ -257,7 +297,7 @@ async def create_lecture_stream_handler(message: Message, state: FSMContext) -> 
     text = (message.text or "").strip()
     await state.update_data(stream_url=None if text == "-" else text)
     await state.set_state(CreateLectureState.waiting_materials_url)
-    await message.answer("Введите materials_url (или '-' если нет):")
+    await message.answer(t("admin", "create_lecture.ask_materials_url"))
 
 
 @router.message(CreateLectureState.waiting_materials_url)
@@ -281,6 +321,12 @@ async def create_lecture_materials_handler(
     )
     await state.clear()
     await message.answer(
-        f"Лекция создана: id={lecture.id}, №{lecture.number} {lecture.title} "
-        f"({lecture.scheduled_at.strftime('%d.%m.%Y %H:%M')})"
+        t(
+            "admin",
+            "create_lecture.created",
+            lecture_id=lecture.id,
+            lecture_number=lecture.number,
+            lecture_title=lecture.title,
+            scheduled_at=lecture.scheduled_at.strftime("%d.%m.%Y %H:%M"),
+        )
     )

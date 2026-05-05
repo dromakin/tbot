@@ -25,9 +25,7 @@ async def reminder_job(
             return
         user_ids = await repo.list_registered_users_for_lecture(lecture_id)
 
-    text = build_reminder_text(lecture)
-    if lecture.stream_url:
-        text += f"\n\nСсылка для подключения: {lecture.stream_url}"
+    text = build_reminder_text(lecture, stream_url=lecture.stream_url)
 
     for user_id in user_ids:
         try:

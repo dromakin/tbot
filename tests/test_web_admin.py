@@ -227,6 +227,11 @@ async def test_web_api_click_settings_and_question_moderation() -> None:
         assert by_hour.status_code == 200
         assert isinstance(by_hour.json(), list)
 
+        export_zip = await client.get("/api/export.zip", headers=admin_header)
+        assert export_zip.status_code == 200
+        assert export_zip.headers["content-type"].startswith("application/zip")
+        assert len(export_zip.content) > 0
+
         forbidden_summary = await client.get("/api/click-stats/summary", headers=user_header)
         assert forbidden_summary.status_code == 403
         forbidden_course_overview = await client.get("/api/course-overview", headers=user_header)

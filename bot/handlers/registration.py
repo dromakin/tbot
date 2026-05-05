@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery
 from bot.db.models import ClickEventType
 from bot.db.repository import Repository
 from bot.keyboards.inline import LectureCallback, MenuCallback, back_to_menu_keyboard, open_lectures_keyboard
-from bot.texts import REGISTRATION_CLOSED_TEXT
+from bot.text_store import t
 
 router = Router(name="registration")
 
@@ -17,12 +17,12 @@ async def registration_menu_handler(callback: CallbackQuery, repo: Repository) -
 
     lectures = await repo.list_open_lectures()
     if not lectures:
-        await callback.message.answer(REGISTRATION_CLOSED_TEXT, reply_markup=back_to_menu_keyboard())
+        await callback.message.answer(t("registration", "closed"), reply_markup=back_to_menu_keyboard())
         await callback.answer()
         return
 
     await callback.message.answer(
-        "<b>📝 Регистрация на лекцию</b>\n\nВыберите лекцию из списка ниже:",
+        t("registration", "header"),
         reply_markup=open_lectures_keyboard(lectures, action="register"),
     )
     await callback.answer()
@@ -55,25 +55,28 @@ async def register_for_lecture_handler(
         full_name=callback.from_user.full_name,
     )
     if lecture is None:
-        await callback.message.answer("Лекция не найдена.", reply_markup=back_to_menu_keyboard())
+        await callback.message.answer(t("registration", "lecture_not_found"), reply_markup=back_to_menu_keyboard())
         await callback.answer()
         return
 
     if not lecture.registration_open:
-        await callback.message.answer(REGISTRATION_CLOSED_TEXT, reply_markup=back_to_menu_keyboard())
+        await callback.message.answer(t("registration", "closed"), reply_markup=back_to_menu_keyboard())
         await callback.answer()
         return
 
     if created:
-        text = (
-            "✅ <b>Регистрация прошла успешно!</b>\n"
-            f"Лекция №{lecture.number}: {lecture.title}\n"
-            "До встречи на лекции! 🚀"
+        text = t(
+            "registration",
+            "success",
+            lecture_number=lecture.number,
+            lecture_title=lecture.title,
         )
     else:
-        text = (
-            "✅ <b>Вы уже зарегистрированы!</b>\n"
-            f"Лекция №{lecture.number}: {lecture.title}"
+        text = t(
+            "registration",
+            "already_registered",
+            lecture_number=lecture.number,
+            lecture_title=lecture.title,
         )
     await callback.message.answer(text, reply_markup=back_to_menu_keyboard())
     await callback.answer()

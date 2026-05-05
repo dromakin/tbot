@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import { apiFetch, buildCsvExportUrl } from '../api/client';
+import { apiFetch, buildCsvExportUrl, buildZipExportUrl } from '../api/client';
 import {
   type ClickEventType,
   type ClickSummaryOut,
@@ -48,6 +49,7 @@ type OverviewSort = 'date' | 'registrations' | 'attendance';
 type OverviewFilter = 'all' | 'open' | 'past';
 
 export function AdminPage(): JSX.Element {
+  const navigate = useNavigate();
   const [me, setMe] = useState<MeOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -394,7 +396,9 @@ export function AdminPage(): JSX.Element {
         <button onClick={() => setTab('registrations')}>Регистрации</button>
         <button onClick={() => setTab('clicks')}>Клики</button>
         <button onClick={() => setTab('questions')}>Вопросы</button>
+        <button className="secondary" onClick={() => navigate('/')}>Пользовательский режим</button>
         <button className="secondary" onClick={() => window.open(buildCsvExportUrl(), '_blank')}>CSV</button>
+        <button className="secondary" onClick={() => window.open(buildZipExportUrl(), '_blank')}>ZIP</button>
       </div>
 
       {error ? <div className="card">Error: {error}</div> : null}

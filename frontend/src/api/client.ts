@@ -30,3 +30,9 @@ export function buildCsvExportUrl(): string {
   if (!initData) return '/api/export.csv';
   return `/api/export.csv?init_data=${encodeURIComponent(initData)}`;
 }
+
+export function buildZipExportUrl(): string {
+  const initData = getInitDataRaw();
+  if (!initData) return '/api/export.zip';
+  return `/api/export.zip?init_data=${encodeURIComponent(initData)}`;
+}

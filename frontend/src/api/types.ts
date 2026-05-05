@@ -167,3 +167,44 @@ export type LectureCreateIn = {
   materials_url: string | null;
   registration_open: boolean;
 };
+
+export type UserLectureOut = {
+  lecture_id: number;
+  lecture_number: number;
+  lecture_title: string;
+  description: string | null;
+  scheduled_at: string;
+  format: 'online' | 'offline';
+  registration_open: boolean;
+  is_registered: boolean;
+  has_materials: boolean;
+  has_stream: boolean;
+};
+
+export type UserRegistrationOut = {
+  lecture_id: number;
+  lecture_number: number;
+  lecture_title: string;
+  scheduled_at: string;
+  registered_at: string;
+};
+
+export type UserActionStatus =
+  | 'ok'
+  | 'already_registered'
+  | 'closed'
+  | 'not_found'
+  | 'offline'
+  | 'pending'
+  | 'not_registered';
+
+export type UserActionOut = {
+  status: UserActionStatus;
+  message: string;
+  url: string | null;
+};
+
+export type UserStaticOut = {
+  program_text: string;
+  contact_text: string;
+};

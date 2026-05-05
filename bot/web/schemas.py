@@ -187,3 +187,35 @@ class QuestionOut(BaseModel):
 class QuestionModerationIn(BaseModel):
     status: Literal["ignored", "answered"]
     answer_text: str | None = None
+
+
+class UserLectureOut(BaseModel):
+    lecture_id: int
+    lecture_number: int
+    lecture_title: str
+    description: str | None
+    scheduled_at: datetime
+    format: LectureFormat
+    registration_open: bool
+    is_registered: bool
+    has_materials: bool
+    has_stream: bool
+
+
+class UserRegistrationOut(BaseModel):
+    lecture_id: int
+    lecture_number: int
+    lecture_title: str
+    scheduled_at: datetime
+    registered_at: datetime
+
+
+class UserActionOut(BaseModel):
+    status: Literal["ok", "already_registered", "closed", "not_found", "offline", "pending", "not_registered"]
+    message: str
+    url: str | None = None
+
+
+class UserStaticOut(BaseModel):
+    program_text: str
+    contact_text: str
