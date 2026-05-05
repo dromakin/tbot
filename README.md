@@ -1,6 +1,6 @@
 # tbot-kib
 
-Telegram-бот для курса КИБ + Telegram Mini App админка.
+Telegram-бот для курсов КИБа с админ панелью в Telegram Mini Apps
 
 ## Возможности
 
