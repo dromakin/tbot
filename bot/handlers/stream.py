@@ -1,7 +1,7 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from bot.db.models import LectureFormat
+from bot.db.models import ClickEventType, LectureFormat
 from bot.db.repository import Repository
 from bot.keyboards.inline import LectureCallback, back_to_menu_keyboard
 
@@ -49,7 +49,11 @@ async def stream_link_handler(
         await callback.answer()
         return
 
-    await repo.create_link_click(user_id=callback.from_user.id, lecture_id=lecture.id)
+    await repo.create_click_event(
+        user_id=callback.from_user.id,
+        lecture_id=lecture.id,
+        event_type=ClickEventType.STREAM_LINK,
+    )
     await callback.message.answer(
         f"🔗 Ссылка для подключения к лекции №{lecture.number}:\n{lecture.stream_url}",
         reply_markup=back_to_menu_keyboard(),

@@ -98,7 +98,7 @@ async def lecture_registrations_handler(message: Message, settings: Settings, re
     ]
     chunk_size = 50
     for index in range(0, len(lines), chunk_size):
-        header = f"Регистрации для lecture_id={lecture_id}:\n" if index == 0 else ""
+        header = f"Регистрации (snapshot профиля) для lecture_id={lecture_id}:\n" if index == 0 else ""
         await message.answer(header + "\n".join(lines[index : index + chunk_size]))
 
 

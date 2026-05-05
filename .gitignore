@@ -154,3 +154,4 @@ bot/web/static/
 
 # Additional Python local caches
 .ruff_cache/
+/frontend/node_modules/

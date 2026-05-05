@@ -1,6 +1,7 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
+from bot.db.models import ClickEventType
 from bot.db.repository import Repository
 from bot.keyboards.inline import LectureCallback, MenuCallback, back_to_menu_keyboard, open_lectures_keyboard
 from bot.texts import REGISTRATION_CLOSED_TEXT
@@ -37,9 +38,21 @@ async def register_for_lecture_handler(
         await callback.answer()
         return
 
+    await repo.upsert_user(
+        tg_user_id=callback.from_user.id,
+        username=callback.from_user.username,
+        full_name=callback.from_user.full_name,
+    )
+    await repo.create_click_event(
+        user_id=callback.from_user.id,
+        lecture_id=callback_data.lecture_id,
+        event_type=ClickEventType.REGISTRATION_CLICK,
+    )
     created, lecture = await repo.register_user_for_lecture(
         user_id=callback.from_user.id,
         lecture_id=callback_data.lecture_id,
+        username=callback.from_user.username,
+        full_name=callback.from_user.full_name,
     )
     if lecture is None:
         await callback.message.answer("Лекция не найдена.", reply_markup=back_to_menu_keyboard())

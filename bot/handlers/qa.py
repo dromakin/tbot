@@ -31,7 +31,17 @@ async def question_text_handler(
         await message.answer("Пожалуйста, отправьте вопрос текстом.")
         return
 
-    question = await repo.create_question(user_id=message.from_user.id, text=message.text)
+    await repo.upsert_user(
+        tg_user_id=message.from_user.id,
+        username=message.from_user.username,
+        full_name=message.from_user.full_name,
+    )
+    question = await repo.create_question(
+        user_id=message.from_user.id,
+        text=message.text,
+        username=message.from_user.username,
+        full_name=message.from_user.full_name,
+    )
     nickname = f"@{message.from_user.username}" if message.from_user.username else "-"
 
     admin_message = (

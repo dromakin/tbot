@@ -51,7 +51,7 @@ def open_lectures_keyboard(lectures: Sequence[Lecture], action: str) -> InlineKe
 
 def materials_keyboard(lectures: Sequence[Lecture], general_materials_url: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="Основные материалы", url=general_materials_url)
+    builder.button(text="Основные материалы", callback_data=MenuCallback(action="materials_general"))
     for lecture in lectures:
         if lecture.materials_url:
             builder.button(
