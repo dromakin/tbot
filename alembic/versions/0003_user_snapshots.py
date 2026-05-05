@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0003_snapshot_user_in_reg_questions"
+revision: str = "0003_user_snapshots"
 down_revision: str | None = "0002_seed_lectures"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

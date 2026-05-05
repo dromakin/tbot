@@ -1,7 +1,7 @@
 """unified click events and click type settings
 
 Revision ID: 0004_click_events_unified
-Revises: 0003_snapshot_user_in_reg_questions
+Revises: 0003_user_snapshots
 Create Date: 2026-05-05 14:30:00.000000
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = "0004_click_events_unified"
-down_revision: str | None = "0003_snapshot_user_in_reg_questions"
+down_revision: str | None = "0003_user_snapshots"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -136,6 +136,9 @@ Caddy автоматически выпускает и продлевает TLS-
   - миграции, вероятно, применились не в ту БД;
   - проверьте, что нет конфликтующего ручного `DB_DSN`, который перебивает `DATABASE_URL`;
   - выполните redeploy после выравнивания переменных.
+- `StringDataRightTruncationError: value too long for type character varying(32)`:
+  - revision ID миграции длиннее лимита Alembic по умолчанию;
+  - `alembic_version.version_num` хранится как `VARCHAR(32)`, держите длину revision ID <= 32 символов.
 - Healthcheck fail:
   - проверьте, что `WEB_ENABLED=true`;
   - endpoint `GET /healthz` должен отдавать `200`.
