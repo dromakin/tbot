@@ -131,3 +131,9 @@ dmypy.json
 
 # IDEA
 .idea/
+
+# OS and local runtime files
+.DS_Store
+bot.db
+bot.db-shm
+bot.db-wal

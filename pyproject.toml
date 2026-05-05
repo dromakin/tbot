@@ -1,0 +1,35 @@
+[project]
+name = "tbot-kib"
+version = "0.1.0"
+description = "Telegram bot for KIB course registrations and attendance stats"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "aiogram>=3.7.0",
+  "sqlalchemy>=2.0.30",
+  "alembic>=1.13.1",
+  "asyncpg>=0.29.0",
+  "aiosqlite>=0.20.0",
+  "apscheduler>=3.10.4",
+  "pydantic-settings>=2.3.4",
+  "python-dotenv>=1.0.1",
+  "loguru>=0.7.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+  "pytest-asyncio>=0.23.7",
+  "ruff>=0.4.8",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["bot"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
