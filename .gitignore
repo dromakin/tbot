@@ -137,3 +137,20 @@ dmypy.json
 bot.db
 bot.db-shm
 bot.db-wal
+
+# Frontend / Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Built static assets from frontend build
+bot/web/static/
+
+# Additional Python local caches
+.ruff_cache/
