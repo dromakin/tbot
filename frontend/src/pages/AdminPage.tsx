@@ -10,6 +10,7 @@ import {
   type ClickTypeSettingOut,
   type ClickTypeStatsOut,
   type CourseOverviewOut,
+  type GeneralMaterialsSettingOut,
   type LectureCreateIn,
   type LectureClickStatsOut,
   type LectureFunnelOut,
@@ -33,6 +34,7 @@ import { ClickTypeDonut } from '../components/ClickTypeDonut';
 import { ClickTypesPanel } from '../components/ClickTypesPanel';
 import { CourseKpiCards } from '../components/CourseKpiCards';
 import { CourseLectureList } from '../components/CourseLectureList';
+import { AppSettingsPanel } from '../components/AppSettingsPanel';
 import { LectureForm } from '../components/LectureForm';
 import { LectureList } from '../components/LectureList';
 import { QuestionsModerationTable } from '../components/QuestionsModerationTable';
@@ -41,7 +43,7 @@ import { StatsTable } from '../components/StatsTable';
 import { initTelegramWebApp } from '../hooks/useTelegram';
 import { AccessDeniedPage } from './AccessDeniedPage';
 
-type TabKey = 'stats' | 'lectures' | 'create' | 'registrations' | 'clicks' | 'questions';
+type TabKey = 'stats' | 'lectures' | 'create' | 'registrations' | 'clicks' | 'questions' | 'settings';
 type QuestionFilter = 'all' | QuestionStatus;
 type TopUsersFilter = ClickEventType | 'all';
 type OverviewPeriod = 7 | 30 | 0;
@@ -78,6 +80,7 @@ export function AdminPage(): JSX.Element {
   const [funnelData, setFunnelData] = useState<LectureFunnelOut | null>(null);
   const [questions, setQuestions] = useState<QuestionOut[]>([]);
   const [questionFilter, setQuestionFilter] = useState<QuestionFilter>('pending');
+  const [generalMaterialsUrl, setGeneralMaterialsUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const selectedLecture = useMemo(
@@ -219,6 +222,11 @@ export function AdminPage(): JSX.Element {
     setRegistrations(data);
   };
 
+  const loadGeneralMaterialsSetting = async () => {
+    const data = await apiFetch<GeneralMaterialsSettingOut>('/api/app-settings/general-materials');
+    setGeneralMaterialsUrl(data.url);
+  };
+
   useEffect(() => {
     initTelegramWebApp();
     Promise.all([
@@ -228,6 +236,7 @@ export function AdminPage(): JSX.Element {
       loadCourseOverview(7),
       loadClickTypes(),
       loadQuestions('pending'),
+      loadGeneralMaterialsSetting(),
     ])
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to initialize admin page'))
       .finally(() => setLoading(false));
@@ -297,6 +306,29 @@ export function AdminPage(): JSX.Element {
         body: JSON.stringify({ materials_url: materialsUrl }),
       });
       await loadLectures();
+    });
+  };
+
+  const handleSaveStream = async (lectureId: number, streamUrl: string | null) => {
+    await withBusy(async () => {
+      await apiFetch<LectureOut>(`/api/lectures/${lectureId}/stream`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stream_url: streamUrl }),
+      });
+      await loadLectures();
+    });
+  };
+
+  const handleSaveGeneralMaterials = async (url: string | null) => {
+    await withBusy(async () => {
+      const payload = url && url.trim() ? url.trim() : null;
+      const response = await apiFetch<GeneralMaterialsSettingOut>('/api/app-settings/general-materials', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: payload }),
+      });
+      setGeneralMaterialsUrl(response.url);
     });
   };
 
@@ -396,6 +428,7 @@ export function AdminPage(): JSX.Element {
         <button onClick={() => setTab('registrations')}>Регистрации</button>
         <button onClick={() => setTab('clicks')}>Клики</button>
         <button onClick={() => setTab('questions')}>Вопросы</button>
+        <button onClick={() => setTab('settings')}>Настройки</button>
         <button className="secondary" onClick={() => navigate('/')}>Пользовательский режим</button>
         <button className="secondary" onClick={() => window.open(buildCsvExportUrl(), '_blank')}>CSV</button>
         <button className="secondary" onClick={() => window.open(buildZipExportUrl(), '_blank')}>ZIP</button>
@@ -467,6 +500,7 @@ export function AdminPage(): JSX.Element {
           lectures={lectures}
           onToggleRegistration={handleToggleRegistration}
           onSaveMaterials={handleSaveMaterials}
+          onSaveStream={handleSaveStream}
           onSelectForRegistrations={(lectureId) => {
             void handleSelectRegistrations(lectureId);
           }}
@@ -593,6 +627,13 @@ export function AdminPage(): JSX.Element {
             onAnswer={handleAnswerQuestion}
           />
         </>
+      ) : null}
+
+      {tab === 'settings' ? (
+        <AppSettingsPanel
+          generalMaterialsUrl={generalMaterialsUrl}
+          onSaveGeneralMaterials={handleSaveGeneralMaterials}
+        />
       ) : null}
     </div>
   );

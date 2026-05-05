@@ -48,6 +48,18 @@ class LectureMaterialsIn(BaseModel):
     materials_url: str | None = None
 
 
+class LectureStreamIn(BaseModel):
+    stream_url: str | None = None
+
+
+class GeneralMaterialsSettingOut(BaseModel):
+    url: str | None
+
+
+class GeneralMaterialsSettingIn(BaseModel):
+    url: str | None = None
+
+
 class StatsRowOut(BaseModel):
     lecture_id: int
     lecture_number: int

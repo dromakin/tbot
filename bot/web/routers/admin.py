@@ -29,7 +29,10 @@ from bot.web.schemas import (
     LectureOverviewSparklinePointOut,
     LectureMaterialsIn,
     LectureOut,
+    LectureStreamIn,
     LectureRegistrationFlagIn,
+    GeneralMaterialsSettingIn,
+    GeneralMaterialsSettingOut,
     QuestionModerationIn,
     QuestionOut,
     RegistrationRowOut,
@@ -282,6 +285,24 @@ async def get_lecture_clicks_by_hour(
     ]
 
 
+@router.get("/app-settings/general-materials", response_model=GeneralMaterialsSettingOut)
+async def get_general_materials_setting(
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> GeneralMaterialsSettingOut:
+    return GeneralMaterialsSettingOut(url=await repo.get_general_materials_url())
+
+
+@router.put("/app-settings/general-materials", response_model=GeneralMaterialsSettingOut)
+async def set_general_materials_setting(
+    payload: GeneralMaterialsSettingIn,
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> GeneralMaterialsSettingOut:
+    await repo.set_general_materials_url(payload.url)
+    return GeneralMaterialsSettingOut(url=await repo.get_general_materials_url())
+
+
 @router.get("/lectures", response_model=list[LectureOut])
 async def get_lectures(
     _admin: VerifiedTmaUser = Depends(require_admin),
@@ -318,6 +339,23 @@ async def set_registration_state(
     repo: Repository = Depends(get_repo),
 ) -> LectureOut:
     ok = await repo.set_registration_open(lecture_id, payload.open)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lecture not found")
+
+    lecture = await repo.get_lecture(lecture_id)
+    if lecture is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lecture not found")
+    return _lecture_to_out(lecture)
+
+
+@router.patch("/lectures/{lecture_id}/stream", response_model=LectureOut)
+async def set_stream_url(
+    lecture_id: int,
+    payload: LectureStreamIn,
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> LectureOut:
+    ok = await repo.set_stream_url(lecture_id, payload.stream_url)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lecture not found")
 

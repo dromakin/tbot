@@ -6,6 +6,7 @@ type Props = {
   lectures: LectureOut[];
   onToggleRegistration: (lectureId: number, next: boolean) => Promise<void>;
   onSaveMaterials: (lectureId: number, materialsUrl: string | null) => Promise<void>;
+  onSaveStream: (lectureId: number, streamUrl: string | null) => Promise<void>;
   onSelectForRegistrations: (lectureId: number) => void;
 };
 
@@ -13,9 +14,11 @@ export function LectureList({
   lectures,
   onToggleRegistration,
   onSaveMaterials,
+  onSaveStream,
   onSelectForRegistrations,
 }: Props): JSX.Element {
   const [materialsDraft, setMaterialsDraft] = useState<Record<number, string>>({});
+  const [streamDraft, setStreamDraft] = useState<Record<number, string>>({});
 
   if (!lectures.length) {
     return <div className="card">Лекций пока нет.</div>;
@@ -57,6 +60,31 @@ export function LectureList({
                   void onSaveMaterials(
                     lecture.id,
                     (materialsDraft[lecture.id] ?? lecture.materials_url ?? '') || null,
+                  )
+                }
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 8 }}>
+            <label>Ссылка на онлайн-трансляцию</label>
+            <div className="row">
+              <input
+                value={streamDraft[lecture.id] ?? lecture.stream_url ?? ''}
+                onChange={(e) =>
+                  setStreamDraft((prev) => ({
+                    ...prev,
+                    [lecture.id]: e.target.value,
+                  }))
+                }
+              />
+              <button
+                onClick={() =>
+                  void onSaveStream(
+                    lecture.id,
+                    (streamDraft[lecture.id] ?? lecture.stream_url ?? '') || null,
                   )
                 }
               >

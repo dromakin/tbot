@@ -18,5 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 COPY --from=frontend /bot/web/static /app/bot/web/static
+COPY deploy/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-CMD ["python", "-m", "bot"]
+CMD ["/entrypoint.sh"]

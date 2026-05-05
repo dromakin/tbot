@@ -19,7 +19,7 @@ Telegram-бот для курса КИБ + Telegram Mini App админка.
 - APScheduler
 - React + Vite + TypeScript
 - PostgreSQL
-- Caddy (TLS + reverse-proxy)
+- Caddy (для VPS) / Railway (managed deployment)
 
 ## Локальный запуск (бот + Mini App)
 
@@ -56,14 +56,11 @@ DB_DSN=postgresql+asyncpg://tbot:tbot@localhost:5432/tbot
 
 4. Важно для `.env`:
 
-- `ORG_CONTACT_TEXT` должен быть в одну строку (используйте `<br>` вместо переносов).
 - Если `WEB_DEV_AUTH_BYPASS=false`, можно оставить `WEB_DEV_USER_ID` пустым или `0`.
-
-Пример корректного значения:
-
-```env
-ORG_CONTACT_TEXT=<b>💬 Для связи используете общий чат по курсу</b><br><br>Если вас в чат не добавили, то попросите через знакомых, друзей чтобы вас добавили.
-```
+- Тексты бота берутся из `graph-src/*.json`.
+- Ссылки на материалы задаются через админ-панель Mini App:
+  - общая ссылка — вкладка `Настройки`;
+  - ссылка конкретной лекции — вкладка `Лекции`.
 
 5. Применить миграции:
 
@@ -173,17 +170,13 @@ INIT_DATA=$(python scripts/make_init_data.py --user-id 111111111 --username admi
 curl -H "Authorization: tma ${INIT_DATA}" http://localhost:8080/api/me
 ```
 
-## Запуск в Docker
+## Деплой
 
-```bash
-docker compose up --build
-```
+Подробные инструкции по деплою и запуску через Docker вынесены в [DEPLOYMENT.md](DEPLOYMENT.md):
 
-Для фонового режима:
-
-```bash
-docker compose up -d --build
-```
+- локальный Docker (`docker-compose.local.yml`);
+- VPS с Caddy (`docker-compose.vps.yml`);
+- Railway (`Dockerfile` + `railway.json`).
 
 ## Mini App в BotFather
 
@@ -191,29 +184,6 @@ docker compose up -d --build
 2. `Bot Settings` -> `Configure Mini App`.
 3. Указать URL Mini App: `https://<ваш-домен>`.
 4. (Опционально) `Menu Button` -> URL `https://<ваш-домен>/admin`.
-
-## Деплой на Timeweb VPS (Ubuntu + Docker)
-
-1. Создать VPS, установить Docker и Docker Compose plugin.
-2. Привязать домен: A-запись `example.ru` -> публичный IP VPS.
-3. Развернуть репозиторий на сервере и заполнить `.env`.
-4. Убедиться, что в `.env` задано:
-   - `DOMAIN=ваш_домен`
-   - `WEB_PUBLIC_URL=https://ваш_домен`
-5. Запустить:
-
-```bash
-docker compose up -d --build
-```
-
-6. Проверить логи:
-
-```bash
-docker compose logs -f bot
-docker compose logs -f caddy
-```
-
-Caddy автоматически выпустит и продлит сертификат Let's Encrypt.
 
 ## Основные команды в боте
 

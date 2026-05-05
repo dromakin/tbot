@@ -168,6 +168,18 @@ export type LectureCreateIn = {
   registration_open: boolean;
 };
 
+export type LectureStreamIn = {
+  stream_url: string | null;
+};
+
+export type GeneralMaterialsSettingOut = {
+  url: string | null;
+};
+
+export type GeneralMaterialsSettingIn = {
+  url: string | null;
+};
+
 export type UserLectureOut = {
   lecture_id: number;
   lecture_number: number;

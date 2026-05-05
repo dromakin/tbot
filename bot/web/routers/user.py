@@ -4,12 +4,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 
-from bot.config import Settings
 from bot.db.models import ClickEventType, LectureFormat
 from bot.db.repository import Repository
 from bot.text_store import t
 from bot.web.auth import VerifiedTmaUser
-from bot.web.deps import get_app_settings, get_current_user, get_repo
+from bot.web.deps import get_current_user, get_repo
 from bot.web.schemas import UserActionOut, UserLectureOut, UserRegistrationOut, UserStaticOut
 
 router = APIRouter(prefix="/api/user", tags=["user"])
@@ -174,7 +173,6 @@ async def get_materials_for_lecture(
 @router.get("/materials/general", response_model=UserActionOut)
 async def get_general_materials(
     current_user: VerifiedTmaUser = Depends(get_user_or_403),
-    settings: Settings = Depends(get_app_settings),
     repo: Repository = Depends(get_repo),
 ) -> UserActionOut:
     await _upsert_current_user(repo, current_user)
@@ -183,10 +181,14 @@ async def get_general_materials(
         lecture_id=None,
         event_type=ClickEventType.MATERIALS_GENERAL,
     )
+    general_materials_url = await repo.get_general_materials_url()
+    if not general_materials_url:
+        return UserActionOut(status="pending", message=t("materials", "unavailable"))
+
     return UserActionOut(
         status="ok",
-        message=t("materials", "general_url", general_materials_url=settings.general_materials_url),
-        url=settings.general_materials_url,
+        message=t("materials", "general_url", general_materials_url=general_materials_url),
+        url=general_materials_url,
     )
 
 

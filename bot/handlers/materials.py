@@ -1,7 +1,6 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from bot.config import Settings
 from bot.db.models import ClickEventType
 from bot.db.repository import Repository
 from bot.keyboards.inline import LectureCallback, MenuCallback, back_to_menu_keyboard, materials_keyboard
@@ -11,7 +10,7 @@ router = Router(name="materials")
 
 
 @router.callback_query(MenuCallback.filter(F.action == "materials"))
-async def materials_menu_handler(callback: CallbackQuery, repo: Repository, settings: Settings) -> None:
+async def materials_menu_handler(callback: CallbackQuery, repo: Repository) -> None:
     lectures = await repo.list_lectures()
     if callback.message is not None:
         await callback.message.answer(
@@ -22,7 +21,7 @@ async def materials_menu_handler(callback: CallbackQuery, repo: Repository, sett
 
 
 @router.callback_query(MenuCallback.filter(F.action == "materials_general"))
-async def materials_general_handler(callback: CallbackQuery, repo: Repository, settings: Settings) -> None:
+async def materials_general_handler(callback: CallbackQuery, repo: Repository) -> None:
     if callback.message is None or callback.from_user is None:
         await callback.answer()
         return
@@ -36,10 +35,17 @@ async def materials_general_handler(callback: CallbackQuery, repo: Repository, s
         event_type=ClickEventType.MATERIALS_GENERAL,
         lecture_id=None,
     )
-    await callback.message.answer(
-        t("materials", "general_url", general_materials_url=settings.general_materials_url),
-        reply_markup=back_to_menu_keyboard(),
-    )
+    general_materials_url = await repo.get_general_materials_url()
+    if general_materials_url:
+        await callback.message.answer(
+            t("materials", "general_url", general_materials_url=general_materials_url),
+            reply_markup=back_to_menu_keyboard(),
+        )
+    else:
+        await callback.message.answer(
+            t("materials", "unavailable"),
+            reply_markup=back_to_menu_keyboard(),
+        )
     await callback.answer()
 
 

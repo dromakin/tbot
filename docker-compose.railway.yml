@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Railway injects this from the managed Postgres service.
+      DATABASE_URL: ${DATABASE_URL}
+      # Railway injects PORT automatically for public services.
+      PORT: ${PORT:-8080}

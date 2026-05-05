@@ -53,8 +53,6 @@ async def test_web_api_me_and_lectures_flow() -> None:
         BOT_TOKEN=bot_token,
         DB_DSN="sqlite+aiosqlite:///:memory:",
         ADMIN_IDS="111",
-        ORG_CONTACT_TEXT="contact",
-        GENERAL_MATERIALS_URL="https://example.com",
         WEB_PUBLIC_URL="https://example.com",
     )
 
@@ -104,6 +102,15 @@ async def test_web_api_me_and_lectures_flow() -> None:
         assert lectures_after.status_code == 200
         assert len(lectures_after.json()) == 1
 
+        lecture_id = lectures_after.json()[0]["id"]
+        patched_stream = await client.patch(
+            f"/api/lectures/{lecture_id}/stream",
+            headers=admin_header,
+            json={"stream_url": "https://example.com/new-stream"},
+        )
+        assert patched_stream.status_code == 200
+        assert patched_stream.json()["stream_url"] == "https://example.com/new-stream"
+
         forbidden = await client.get("/api/lectures", headers=user_header)
         assert forbidden.status_code == 403
 
@@ -117,8 +124,6 @@ async def test_web_api_click_settings_and_question_moderation() -> None:
         BOT_TOKEN=bot_token,
         DB_DSN="sqlite+aiosqlite:///:memory:",
         ADMIN_IDS="111",
-        ORG_CONTACT_TEXT="contact",
-        GENERAL_MATERIALS_URL="https://example.com",
         WEB_PUBLIC_URL="https://example.com",
     )
 
@@ -182,6 +187,18 @@ async def test_web_api_click_settings_and_question_moderation() -> None:
         click_types = await client.get("/api/click-types", headers=admin_header)
         assert click_types.status_code == 200
         assert any(item["event_type"] == "stream_link" for item in click_types.json())
+
+        general_materials_before = await client.get("/api/app-settings/general-materials", headers=admin_header)
+        assert general_materials_before.status_code == 200
+        assert general_materials_before.json()["url"] is None
+
+        general_materials_updated = await client.put(
+            "/api/app-settings/general-materials",
+            headers=admin_header,
+            json={"url": "https://example.com/general-updated"},
+        )
+        assert general_materials_updated.status_code == 200
+        assert general_materials_updated.json()["url"] == "https://example.com/general-updated"
 
         patch_click_type = await client.patch(
             "/api/click-types/materials_general",

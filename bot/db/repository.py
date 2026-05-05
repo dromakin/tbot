@@ -7,6 +7,7 @@ from sqlalchemy import Select, case, distinct, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import (
+    AppSetting,
     ClickEvent,
     ClickEventSetting,
     ClickEventType,
@@ -17,6 +18,7 @@ from bot.db.models import (
     Registration,
     User,
 )
+from bot.services.app_settings import AppSettingKey
 
 
 def utcnow() -> datetime:
@@ -289,7 +291,7 @@ class Repository:
         await self.session.commit()
         return True
 
-    async def set_stream_url(self, lecture_id: int, stream_url: str) -> bool:
+    async def set_stream_url(self, lecture_id: int, stream_url: str | None) -> bool:
         lecture = await self.session.get(Lecture, lecture_id)
         if lecture is None:
             return False
@@ -304,6 +306,32 @@ class Repository:
         lecture.materials_url = materials_url
         await self.session.commit()
         return True
+
+    async def get_setting(self, key: str) -> str | None:
+        setting = await self.session.get(AppSetting, key)
+        if setting is None:
+            return None
+        return setting.value
+
+    async def set_setting(self, key: str, value: str | None) -> None:
+        setting = await self.session.get(AppSetting, key)
+        if setting is None:
+            self.session.add(AppSetting(key=key, value=value, updated_at=utcnow()))
+        else:
+            setting.value = value
+            setting.updated_at = utcnow()
+        await self.session.commit()
+
+    async def get_general_materials_url(self) -> str | None:
+        value = await self.get_setting(AppSettingKey.GENERAL_MATERIALS_URL.value)
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+    async def set_general_materials_url(self, url: str | None) -> None:
+        value = url.strip() if isinstance(url, str) else None
+        await self.set_setting(AppSettingKey.GENERAL_MATERIALS_URL.value, value or None)
 
     async def register_user_for_lecture(
         self,

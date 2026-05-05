@@ -45,8 +45,6 @@ async def test_user_api_flow() -> None:
         BOT_TOKEN=bot_token,
         DB_DSN="sqlite+aiosqlite:///:memory:",
         ADMIN_IDS="111",
-        ORG_CONTACT_TEXT="contact",
-        GENERAL_MATERIALS_URL="https://example.com/general",
         WEB_PUBLIC_URL="https://example.com",
     )
 
@@ -59,6 +57,7 @@ async def test_user_api_flow() -> None:
 
     async with session_factory() as session:
         repo = Repository(session)
+        await repo.set_general_materials_url("https://example.com/general")
         await repo.create_lecture(
             number=501,
             title="User lecture",
