@@ -1,0 +1,16 @@
+{
+  "header": "<b>📅 Расписание лекций</b>",
+  "empty": "Сейчас нет открытых лекций для регистрации.",
+  "format_online": "Онлайн",
+  "format_offline": "Очно",
+  "link_later": "Будет позже.",
+  "link_available": "Доступна по кнопке ниже.",
+  "lecture_card": "<b>Лекция №{lecture_number}: {lecture_title}</b>\n\n📅 <b>Дата:</b> {scheduled_at}\n💻 <b>Формат:</b> {format_label}\n\n{lecture_description}",
+  "lecture_card_stream": "{lecture_card}\n\n🔗 <b>Ссылка для подключения:</b>\n{stream_line}",
+  "keyboards": {
+    "lecture_actions": {
+      "register": "Зарегистрироваться",
+      "stream": "Получить ссылку для подключения"
+    }
+  }
+}
