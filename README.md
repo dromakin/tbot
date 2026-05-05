@@ -68,6 +68,8 @@ DB_DSN=postgresql+asyncpg://tbot:tbot@localhost:5432/tbot
 make migrate
 ```
 
+`make migrate` использует тот же DSN, что и `make dev-bot` (переменные `DATABASE_URL`/`DB_DSN` из окружения и `.env`).
+
 6. Запустить бота:
 
 ```bash
