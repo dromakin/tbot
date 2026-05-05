@@ -108,12 +108,22 @@ def upgrade() -> None:
             {
                 "number": 8,
                 "title": "BYOD. Управление персоналом и соц. инженерия.",
-                "description": "Безопасность в брокерах сообщений - Apache Kafka.",
+                "description": "BYOD проблемы ИБ. Управление персоналом и социальная инженерия.",
                 "scheduled_at": datetime(2026, 5, 5, 19, 30, tzinfo=msk),
                 "format": "online",
                 "stream_url": "https://example.com/lecture-7-stream",
                 "materials_url": None,
                 "registration_open": True,
+            },
+            {
+                "number": 9,
+                "title": "Телеметрия и мониторинг. Управление доступом, IAM.",
+                "description": "Телеметрия и мониторинг ИБ. Управление доступом, IAM",
+                "scheduled_at": datetime(2026, 5, 13, 19, 0, tzinfo=msk),
+                "format": "online",
+                "stream_url": "https://example.com/lecture-7-stream",
+                "materials_url": None,
+                "registration_open": False,
             },
         ],
     )
