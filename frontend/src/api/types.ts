@@ -199,6 +199,14 @@ export type UserLectureOut = {
   has_stream: boolean;
 };
 
+export type UserMaterialsLectureOut = {
+  lecture_id: number;
+  lecture_number: number;
+  lecture_title: string;
+  scheduled_at: string;
+  has_materials: boolean;
+};
+
 export type UserRegistrationOut = {
   lecture_id: number;
   lecture_number: number;

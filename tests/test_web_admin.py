@@ -120,6 +120,22 @@ async def test_web_api_me_and_lectures_flow() -> None:
         assert patched_topics.status_code == 200
         assert patched_topics.json()["topics"] == "1. Updated topic"
 
+        close_registration = await client.patch(
+            f"/api/lectures/{lecture_id}/registration",
+            headers=admin_header,
+            json={"open": False},
+        )
+        assert close_registration.status_code == 200
+        assert close_registration.json()["registration_open"] is False
+
+        open_registration = await client.patch(
+            f"/api/lectures/{lecture_id}/registration",
+            headers=admin_header,
+            json={"open": True},
+        )
+        assert open_registration.status_code == 200
+        assert open_registration.json()["registration_open"] is True
+
         forbidden = await client.get("/api/lectures", headers=user_header)
         assert forbidden.status_code == 403
 

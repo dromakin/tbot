@@ -2,10 +2,17 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { apiFetch } from '../api/client';
-import { type MeOut, type UserActionOut, type UserLectureOut, type UserRegistrationOut, type UserStaticOut } from '../api/types';
+import {
+  type MeOut,
+  type UserActionOut,
+  type UserLectureOut,
+  type UserMaterialsLectureOut,
+  type UserRegistrationOut,
+  type UserStaticOut,
+} from '../api/types';
 import { initTelegramWebApp } from '../hooks/useTelegram';
 
-type UserTab = 'schedule' | 'registrations' | 'program' | 'contact';
+type UserTab = 'schedule' | 'registrations' | 'materials' | 'program' | 'contact';
 
 export function UserPage(): JSX.Element {
   const navigate = useNavigate();
@@ -15,6 +22,7 @@ export function UserPage(): JSX.Element {
   const [tab, setTab] = useState<UserTab>('schedule');
   const [me, setMe] = useState<MeOut | null>(null);
   const [lectures, setLectures] = useState<UserLectureOut[]>([]);
+  const [materialsLectures, setMaterialsLectures] = useState<UserMaterialsLectureOut[]>([]);
   const [registrations, setRegistrations] = useState<UserRegistrationOut[]>([]);
   const [staticData, setStaticData] = useState<UserStaticOut | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -28,6 +36,11 @@ export function UserPage(): JSX.Element {
   const loadLectures = async () => {
     const data = await apiFetch<UserLectureOut[]>('/api/user/lectures');
     setLectures(data);
+  };
+
+  const loadMaterials = async () => {
+    const data = await apiFetch<UserMaterialsLectureOut[]>('/api/user/materials/lectures');
+    setMaterialsLectures(data);
   };
 
   const loadRegistrations = async () => {
@@ -61,7 +74,7 @@ export function UserPage(): JSX.Element {
       } else {
         setActionMessage(response.message);
       }
-      await Promise.all([loadLectures(), loadRegistrations()]);
+      await Promise.all([loadLectures(), loadMaterials(), loadRegistrations()]);
     });
   };
 
@@ -70,7 +83,7 @@ export function UserPage(): JSX.Element {
     void (async () => {
       try {
         await loadMe();
-        await Promise.all([loadLectures(), loadRegistrations(), loadStatic()]);
+        await Promise.all([loadLectures(), loadMaterials(), loadRegistrations(), loadStatic()]);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to initialize user page');
       } finally {
@@ -104,6 +117,7 @@ export function UserPage(): JSX.Element {
       <div className="row" style={{ marginBottom: 12 }}>
         <button onClick={() => setTab('schedule')}>Расписание</button>
         <button onClick={() => setTab('registrations')}>Мои регистрации</button>
+        <button onClick={() => setTab('materials')}>Материалы</button>
         <button onClick={() => setTab('program')}>Программа курса</button>
         <button onClick={() => setTab('contact')}>Контакты</button>
       </div>
@@ -114,16 +128,6 @@ export function UserPage(): JSX.Element {
 
       {tab === 'schedule' ? (
         <>
-          <div className="card">
-            <button
-              className="secondary"
-              onClick={() => {
-                void handleAction('/api/user/materials/general');
-              }}
-            >
-              Основные материалы курса
-            </button>
-          </div>
           {lectures.length ? (
             lectures.map((lecture) => (
               <div className="card" key={lecture.lecture_id}>
@@ -185,6 +189,44 @@ export function UserPage(): JSX.Element {
             <div>Вы пока не зарегистрированы ни на одну лекцию.</div>
           )}
         </div>
+      ) : null}
+
+      {tab === 'materials' ? (
+        <>
+          <div className="card">
+            <button
+              className="secondary"
+              onClick={() => {
+                void handleAction('/api/user/materials/general');
+              }}
+            >
+              Основные материалы курса
+            </button>
+          </div>
+          {materialsLectures.length ? (
+            materialsLectures.map((lecture) => (
+              <div className="card" key={lecture.lecture_id}>
+                <div>
+                  <b>№{lecture.lecture_number} {lecture.lecture_title}</b>
+                </div>
+                <div>{new Date(lecture.scheduled_at).toLocaleString('ru-RU')}</div>
+                <div className="row" style={{ marginTop: 8 }}>
+                  <button
+                    className="secondary"
+                    disabled={!lecture.has_materials}
+                    onClick={() => {
+                      void handleAction(`/api/user/lectures/${lecture.lecture_id}/materials`);
+                    }}
+                  >
+                    Получить материалы
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="card">Материалы пока отсутствуют.</div>
+          )}
+        </>
       ) : null}
 
       {tab === 'program' ? (

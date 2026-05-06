@@ -58,17 +58,37 @@ async def test_user_api_flow() -> None:
     async with session_factory() as session:
         repo = Repository(session)
         await repo.set_general_materials_url("https://example.com/general")
-        await repo.create_lecture(
+        await repo.upsert_user(222, "student", "Student User")
+
+        open_lecture = await repo.create_lecture(
             number=501,
-            title="User lecture",
+            title="Open user lecture",
             description="for user api",
             topics="1. Тема из БД\n2. Еще тема",
             scheduled_at=datetime(2026, 12, 2, 10, 0, tzinfo=timezone.utc),
             lecture_format=LectureFormat.ONLINE,
-            stream_url="https://telemost.yandex.ru/j/user",
-            materials_url="https://example.com/materials",
+            stream_url="https://telemost.yandex.ru/j/user-open",
+            materials_url="https://example.com/materials-open",
             registration_open=True,
         )
+        closed_lecture = await repo.create_lecture(
+            number=502,
+            title="Closed user lecture",
+            description="closed but with materials",
+            topics="1. Закрытая тема",
+            scheduled_at=datetime(2026, 12, 3, 10, 0, tzinfo=timezone.utc),
+            lecture_format=LectureFormat.ONLINE,
+            stream_url="https://telemost.yandex.ru/j/user-closed",
+            materials_url="https://example.com/materials-closed",
+            registration_open=True,
+        )
+        await repo.register_user_for_lecture(
+            222,
+            closed_lecture.id,
+            username="student",
+            full_name="Student User",
+        )
+        await repo.set_registration_open(closed_lecture.id, False)
 
     user_header = {
         "Authorization": f"tma {build_init_data(bot_token=bot_token, user_id=222, username='student')}"
@@ -83,7 +103,9 @@ async def test_user_api_flow() -> None:
         lectures = await client.get("/api/user/lectures", headers=user_header)
         assert lectures.status_code == 200
         assert lectures.json()
+        assert len(lectures.json()) == 1
         lecture_id = lectures.json()[0]["lecture_id"]
+        assert lectures.json()[0]["lecture_title"] == "Open user lecture"
 
         registered = await client.post(f"/api/user/lectures/{lecture_id}/register", headers=user_header)
         assert registered.status_code == 200
@@ -97,6 +119,24 @@ async def test_user_api_flow() -> None:
         materials = await client.get(f"/api/user/lectures/{lecture_id}/materials", headers=user_header)
         assert materials.status_code == 200
         assert materials.json()["status"] == "ok"
+
+        materials_list = await client.get("/api/user/materials/lectures", headers=user_header)
+        assert materials_list.status_code == 200
+        assert len(materials_list.json()) == 2
+        material_lecture_ids = {row["lecture_id"] for row in materials_list.json()}
+        assert lecture_id in material_lecture_ids
+
+        closed_lecture_id = next(
+            row["lecture_id"]
+            for row in materials_list.json()
+            if row["lecture_title"] == "Closed user lecture"
+        )
+        closed_materials = await client.get(
+            f"/api/user/lectures/{closed_lecture_id}/materials",
+            headers=user_header,
+        )
+        assert closed_materials.status_code == 200
+        assert closed_materials.json()["status"] == "ok"
 
         general_materials = await client.get("/api/user/materials/general", headers=user_header)
         assert general_materials.status_code == 200

@@ -38,7 +38,10 @@ export function LectureList({
           <div>Дата: {new Date(lecture.scheduled_at).toLocaleString()}</div>
           <div>Формат: {lecture.format}</div>
           <div className="row" style={{ marginTop: 8 }}>
-            <button onClick={() => void onToggleRegistration(lecture.id, !lecture.registration_open)}>
+            <button
+              className={lecture.registration_open ? 'secondary' : undefined}
+              onClick={() => void onToggleRegistration(lecture.id, !lecture.registration_open)}
+            >
               {lecture.registration_open ? 'Закрыть регистрацию' : 'Открыть регистрацию'}
             </button>
             <button className="secondary" onClick={() => onSelectForRegistrations(lecture.id)}>

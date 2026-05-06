@@ -220,6 +220,14 @@ class UserLectureOut(BaseModel):
     has_stream: bool
 
 
+class UserMaterialsLectureOut(BaseModel):
+    lecture_id: int
+    lecture_number: int
+    lecture_title: str
+    scheduled_at: datetime
+    has_materials: bool
+
+
 class UserRegistrationOut(BaseModel):
     lecture_id: int
     lecture_number: int
