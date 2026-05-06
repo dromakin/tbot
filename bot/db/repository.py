@@ -248,6 +248,7 @@ class Repository:
             stream_url=stream_url,
             materials_url=materials_url,
             registration_open=registration_open,
+            registration_opened_at=utcnow() if registration_open else None,
         )
         self.session.add(lecture)
         await self.session.commit()
@@ -290,6 +291,7 @@ class Repository:
         if lecture is None:
             return False
         lecture.registration_open = is_open
+        lecture.registration_opened_at = utcnow() if is_open else None
         await self.session.commit()
         return True
 
@@ -342,6 +344,23 @@ class Repository:
     async def set_general_materials_url(self, url: str | None) -> None:
         value = url.strip() if isinstance(url, str) else None
         await self.set_setting(AppSettingKey.GENERAL_MATERIALS_URL.value, value or None)
+
+    async def get_auto_close_hours(self) -> int:
+        value = await self.get_setting(AppSettingKey.AUTO_CLOSE_REGISTRATION_HOURS.value)
+        if value is None:
+            return 24
+        try:
+            parsed = int(value.strip())
+        except (TypeError, ValueError):
+            return 24
+        if parsed < 0 or parsed > 8760:
+            return 24
+        return parsed
+
+    async def set_auto_close_hours(self, hours: int) -> None:
+        if hours < 0 or hours > 8760:
+            raise ValueError("auto_close_registration_hours must be in range 0..8760")
+        await self.set_setting(AppSettingKey.AUTO_CLOSE_REGISTRATION_HOURS.value, str(hours))
 
     async def register_user_for_lecture(
         self,
@@ -561,11 +580,18 @@ class Repository:
             for row in result.all()
         ]
 
-    async def close_started_registrations(self) -> int:
+    async def close_expired_registrations(self, hours: int) -> int:
+        if hours <= 0:
+            return 0
+        threshold = utcnow() - timedelta(hours=hours)
         stmt = (
             update(Lecture)
-            .where(Lecture.registration_open.is_(True), Lecture.scheduled_at <= utcnow())
-            .values(registration_open=False)
+            .where(
+                Lecture.registration_open.is_(True),
+                Lecture.registration_opened_at.is_not(None),
+                Lecture.registration_opened_at <= threshold,
+            )
+            .values(registration_open=False, registration_opened_at=None)
             .execution_options(synchronize_session=False)
         )
         result = await self.session.execute(stmt)

@@ -12,6 +12,8 @@ from bot.text_store import t
 from bot.web.auth import VerifiedTmaUser
 from bot.web.deps import get_bot, get_repo, require_admin
 from bot.web.schemas import (
+    AutoCloseHoursIn,
+    AutoCloseHoursOut,
     CourseOverviewOut,
     ClickSummaryItemOut,
     ClickSummaryOut,
@@ -302,6 +304,24 @@ async def set_general_materials_setting(
 ) -> GeneralMaterialsSettingOut:
     await repo.set_general_materials_url(payload.url)
     return GeneralMaterialsSettingOut(url=await repo.get_general_materials_url())
+
+
+@router.get("/settings/auto-close-hours", response_model=AutoCloseHoursOut)
+async def get_auto_close_hours_setting(
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> AutoCloseHoursOut:
+    return AutoCloseHoursOut(hours=await repo.get_auto_close_hours())
+
+
+@router.put("/settings/auto-close-hours", response_model=AutoCloseHoursOut)
+async def set_auto_close_hours_setting(
+    payload: AutoCloseHoursIn,
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> AutoCloseHoursOut:
+    await repo.set_auto_close_hours(payload.hours)
+    return AutoCloseHoursOut(hours=await repo.get_auto_close_hours())
 
 
 @router.get("/lectures", response_model=list[LectureOut])

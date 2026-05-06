@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { apiFetch, buildCsvExportUrl, buildZipExportUrl } from '../api/client';
 import {
+  type AutoCloseHoursOut,
   type ClickEventType,
   type ClickSummaryOut,
   type ClickTimeseriesPointOut,
@@ -81,6 +82,7 @@ export function AdminPage(): JSX.Element {
   const [questions, setQuestions] = useState<QuestionOut[]>([]);
   const [questionFilter, setQuestionFilter] = useState<QuestionFilter>('pending');
   const [generalMaterialsUrl, setGeneralMaterialsUrl] = useState<string | null>(null);
+  const [autoCloseHours, setAutoCloseHours] = useState(24);
   const [busy, setBusy] = useState(false);
 
   const selectedLecture = useMemo(
@@ -227,6 +229,11 @@ export function AdminPage(): JSX.Element {
     setGeneralMaterialsUrl(data.url);
   };
 
+  const loadAutoCloseHours = async () => {
+    const data = await apiFetch<AutoCloseHoursOut>('/api/settings/auto-close-hours');
+    setAutoCloseHours(data.hours);
+  };
+
   useEffect(() => {
     initTelegramWebApp();
     Promise.all([
@@ -237,6 +244,7 @@ export function AdminPage(): JSX.Element {
       loadClickTypes(),
       loadQuestions('pending'),
       loadGeneralMaterialsSetting(),
+      loadAutoCloseHours(),
     ])
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to initialize admin page'))
       .finally(() => setLoading(false));
@@ -340,6 +348,18 @@ export function AdminPage(): JSX.Element {
         body: JSON.stringify({ url: payload }),
       });
       setGeneralMaterialsUrl(response.url);
+    });
+  };
+
+  const handleSaveAutoCloseHours = async (hours: number) => {
+    await withBusy(async () => {
+      const payload = Math.min(8760, Math.max(0, Math.round(hours)));
+      const response = await apiFetch<AutoCloseHoursOut>('/api/settings/auto-close-hours', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hours: payload }),
+      });
+      setAutoCloseHours(response.hours);
     });
   };
 
@@ -644,7 +664,9 @@ export function AdminPage(): JSX.Element {
       {tab === 'settings' ? (
         <AppSettingsPanel
           generalMaterialsUrl={generalMaterialsUrl}
+          autoCloseHours={autoCloseHours}
           onSaveGeneralMaterials={handleSaveGeneralMaterials}
+          onSaveAutoCloseHours={handleSaveAutoCloseHours}
         />
       ) : null}
     </div>

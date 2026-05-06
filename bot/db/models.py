@@ -63,6 +63,7 @@ class Lecture(Base):
     stream_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     materials_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     registration_open: Mapped[bool] = mapped_column(default=False, nullable=False)
+    registration_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

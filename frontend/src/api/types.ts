@@ -16,6 +16,7 @@ export type LectureOut = {
   stream_url: string | null;
   materials_url: string | null;
   registration_open: boolean;
+  registration_opened_at: string | null;
 };
 
 export type StatsRowOut = {
@@ -184,6 +185,14 @@ export type GeneralMaterialsSettingOut = {
 
 export type GeneralMaterialsSettingIn = {
   url: string | null;
+};
+
+export type AutoCloseHoursOut = {
+  hours: number;
+};
+
+export type AutoCloseHoursIn = {
+  hours: number;
 };
 
 export type UserLectureOut = {

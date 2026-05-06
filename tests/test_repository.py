@@ -385,3 +385,90 @@ async def test_set_topics_updates_lecture(repo: Repository) -> None:
     updated = await repo.get_lecture(lecture.id)
     assert updated is not None
     assert updated.topics == "1. Первая тема\n2. Вторая тема"
+
+
+@pytest.mark.asyncio
+async def test_registration_open_timestamp_tracking(repo: Repository) -> None:
+    lecture = await repo.create_lecture(
+        number=92,
+        title="Registration timestamp lecture",
+        description="desc",
+        scheduled_at=datetime(2026, 7, 2, 10, 0, tzinfo=timezone.utc),
+        lecture_format=LectureFormat.ONLINE,
+        registration_open=False,
+    )
+    assert lecture.registration_opened_at is None
+
+    opened = await repo.set_registration_open(lecture.id, True)
+    assert opened is True
+    lecture_after_open = await repo.get_lecture(lecture.id)
+    assert lecture_after_open is not None
+    assert lecture_after_open.registration_opened_at is not None
+    opened_at_first = lecture_after_open.registration_opened_at
+
+    closed = await repo.set_registration_open(lecture.id, False)
+    assert closed is True
+    lecture_after_close = await repo.get_lecture(lecture.id)
+    assert lecture_after_close is not None
+    assert lecture_after_close.registration_opened_at is None
+
+    reopened = await repo.set_registration_open(lecture.id, True)
+    assert reopened is True
+    lecture_after_reopen = await repo.get_lecture(lecture.id)
+    assert lecture_after_reopen is not None
+    assert lecture_after_reopen.registration_opened_at is not None
+    assert lecture_after_reopen.registration_opened_at >= opened_at_first
+
+
+@pytest.mark.asyncio
+async def test_close_expired_registrations(repo: Repository) -> None:
+    old_lecture = await repo.create_lecture(
+        number=93,
+        title="Old open lecture",
+        description="desc",
+        scheduled_at=datetime(2026, 7, 3, 10, 0, tzinfo=timezone.utc),
+        lecture_format=LectureFormat.ONLINE,
+        registration_open=True,
+    )
+    fresh_lecture = await repo.create_lecture(
+        number=94,
+        title="Fresh open lecture",
+        description="desc",
+        scheduled_at=datetime(2026, 7, 4, 10, 0, tzinfo=timezone.utc),
+        lecture_format=LectureFormat.ONLINE,
+        registration_open=True,
+    )
+
+    old_model = await repo.get_lecture(old_lecture.id)
+    fresh_model = await repo.get_lecture(fresh_lecture.id)
+    assert old_model is not None
+    assert fresh_model is not None
+    old_model.registration_opened_at = datetime.now(timezone.utc) - timedelta(hours=2)
+    await repo.session.commit()
+
+    closed_count = await repo.close_expired_registrations(hours=1)
+    assert closed_count == 1
+
+    await repo.session.refresh(old_model)
+    await repo.session.refresh(fresh_model)
+    assert old_model.registration_open is False
+    assert old_model.registration_opened_at is None
+    assert fresh_model.registration_open is True
+    assert fresh_model.registration_opened_at is not None
+
+
+@pytest.mark.asyncio
+async def test_auto_close_hours_setting_roundtrip(repo: Repository) -> None:
+    assert await repo.get_auto_close_hours() == 24
+
+    await repo.set_auto_close_hours(36)
+    assert await repo.get_auto_close_hours() == 36
+
+    closed_count = await repo.close_expired_registrations(hours=0)
+    assert closed_count == 0
+
+    with pytest.raises(ValueError):
+        await repo.set_auto_close_hours(-1)
+
+    with pytest.raises(ValueError):
+        await repo.set_auto_close_hours(8761)

@@ -135,6 +135,33 @@ async def test_web_api_me_and_lectures_flow() -> None:
         )
         assert open_registration.status_code == 200
         assert open_registration.json()["registration_open"] is True
+        assert open_registration.json()["registration_opened_at"] is not None
+
+        auto_close_default = await client.get("/api/settings/auto-close-hours", headers=admin_header)
+        assert auto_close_default.status_code == 200
+        assert auto_close_default.json()["hours"] == 24
+
+        auto_close_updated = await client.put(
+            "/api/settings/auto-close-hours",
+            headers=admin_header,
+            json={"hours": 72},
+        )
+        assert auto_close_updated.status_code == 200
+        assert auto_close_updated.json()["hours"] == 72
+
+        auto_close_invalid_low = await client.put(
+            "/api/settings/auto-close-hours",
+            headers=admin_header,
+            json={"hours": -1},
+        )
+        assert auto_close_invalid_low.status_code == 422
+
+        auto_close_invalid_high = await client.put(
+            "/api/settings/auto-close-hours",
+            headers=admin_header,
+            json={"hours": 8761},
+        )
+        assert auto_close_invalid_high.status_code == 422
 
         forbidden = await client.get("/api/lectures", headers=user_header)
         assert forbidden.status_code == 403

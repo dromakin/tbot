@@ -28,6 +28,7 @@ class LectureOut(BaseModel):
     stream_url: str | None
     materials_url: str | None
     registration_open: bool
+    registration_opened_at: datetime | None
 
 
 class LectureCreateIn(BaseModel):
@@ -64,6 +65,14 @@ class GeneralMaterialsSettingOut(BaseModel):
 
 class GeneralMaterialsSettingIn(BaseModel):
     url: str | None = None
+
+
+class AutoCloseHoursOut(BaseModel):
+    hours: int = Field(ge=0, le=8760)
+
+
+class AutoCloseHoursIn(BaseModel):
+    hours: int = Field(ge=0, le=8760)
 
 
 class StatsRowOut(BaseModel):
