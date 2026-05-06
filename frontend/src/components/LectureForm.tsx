@@ -11,6 +11,7 @@ export function LectureForm({ onSubmit }: Props): JSX.Element {
     number: 1,
     title: '',
     description: '',
+    topics: null,
     scheduled_at: new Date().toISOString().slice(0, 16),
     format: 'online',
     stream_url: null,
@@ -29,10 +30,18 @@ export function LectureForm({ onSubmit }: Props): JSX.Element {
     try {
       await onSubmit({
         ...form,
+        topics: form.topics || null,
         stream_url: form.stream_url || null,
         materials_url: form.materials_url || null,
       });
-      setForm((prev) => ({ ...prev, title: '', description: '', stream_url: null, materials_url: null }));
+      setForm((prev) => ({
+        ...prev,
+        title: '',
+        description: '',
+        topics: null,
+        stream_url: null,
+        materials_url: null,
+      }));
     } finally {
       setSaving(false);
     }
@@ -60,6 +69,15 @@ export function LectureForm({ onSubmit }: Props): JSX.Element {
       <div>
         <label>Описание</label>
         <textarea rows={3} value={form.description} onChange={(e) => update('description', e.target.value)} />
+      </div>
+
+      <div>
+        <label>Темы программы (1 строка = 1 тема)</label>
+        <textarea
+          rows={4}
+          value={form.topics ?? ''}
+          onChange={(e) => update('topics', e.target.value || null)}
+        />
       </div>
 
       <div className="row">

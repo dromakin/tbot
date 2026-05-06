@@ -13,6 +13,12 @@ from bot.db.repository import Repository
 from bot.services.reminders import build_reminder_text
 
 
+def _to_aware(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 async def reminder_job(
     bot: Bot,
     session_factory: async_sessionmaker[AsyncSession],
@@ -58,11 +64,13 @@ async def sync_lecture_jobs(
 
     async with session_factory() as session:
         repo = Repository(session)
+        auto_close_hours = await repo.get_auto_close_hours()
+        await repo.close_expired_registrations(auto_close_hours)
         lectures = await repo.list_lectures()
-        await repo.close_started_registrations()
 
     for lecture in lectures:
-        reminder_time = lecture.scheduled_at - timedelta(minutes=settings.remind_before_min)
+        scheduled_at = _to_aware(lecture.scheduled_at)
+        reminder_time = scheduled_at - timedelta(minutes=settings.remind_before_min)
         if reminder_time.astimezone(timezone.utc) > now:
             scheduler.add_job(
                 reminder_job,
@@ -73,11 +81,15 @@ async def sync_lecture_jobs(
                 replace_existing=True,
             )
 
-        if lecture.scheduled_at.astimezone(timezone.utc) > now:
+        opened_at = lecture.registration_opened_at
+        if auto_close_hours > 0 and lecture.registration_open and opened_at is not None:
+            close_at = _to_aware(opened_at) + timedelta(hours=auto_close_hours)
+            if close_at.astimezone(timezone.utc) <= now:
+                continue
             scheduler.add_job(
                 close_registration_job,
                 trigger="date",
-                run_date=lecture.scheduled_at,
+                run_date=close_at,
                 args=[session_factory, lecture.id],
                 id=f"lecture_close_registration_{lecture.id}",
                 replace_existing=True,

@@ -12,6 +12,8 @@ from bot.text_store import t
 from bot.web.auth import VerifiedTmaUser
 from bot.web.deps import get_bot, get_repo, require_admin
 from bot.web.schemas import (
+    AutoCloseHoursIn,
+    AutoCloseHoursOut,
     CourseOverviewOut,
     ClickSummaryItemOut,
     ClickSummaryOut,
@@ -30,6 +32,7 @@ from bot.web.schemas import (
     LectureMaterialsIn,
     LectureOut,
     LectureStreamIn,
+    LectureTopicsIn,
     LectureRegistrationFlagIn,
     GeneralMaterialsSettingIn,
     GeneralMaterialsSettingOut,
@@ -303,6 +306,24 @@ async def set_general_materials_setting(
     return GeneralMaterialsSettingOut(url=await repo.get_general_materials_url())
 
 
+@router.get("/settings/auto-close-hours", response_model=AutoCloseHoursOut)
+async def get_auto_close_hours_setting(
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> AutoCloseHoursOut:
+    return AutoCloseHoursOut(hours=await repo.get_auto_close_hours())
+
+
+@router.put("/settings/auto-close-hours", response_model=AutoCloseHoursOut)
+async def set_auto_close_hours_setting(
+    payload: AutoCloseHoursIn,
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> AutoCloseHoursOut:
+    await repo.set_auto_close_hours(payload.hours)
+    return AutoCloseHoursOut(hours=await repo.get_auto_close_hours())
+
+
 @router.get("/lectures", response_model=list[LectureOut])
 async def get_lectures(
     _admin: VerifiedTmaUser = Depends(require_admin),
@@ -322,6 +343,7 @@ async def create_lecture(
         number=payload.number,
         title=payload.title,
         description=payload.description,
+        topics=payload.topics,
         scheduled_at=payload.scheduled_at,
         lecture_format=payload.format,
         stream_url=payload.stream_url,
@@ -373,6 +395,23 @@ async def set_materials_url(
     repo: Repository = Depends(get_repo),
 ) -> LectureOut:
     ok = await repo.set_materials_url(lecture_id, payload.materials_url)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lecture not found")
+
+    lecture = await repo.get_lecture(lecture_id)
+    if lecture is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lecture not found")
+    return _lecture_to_out(lecture)
+
+
+@router.patch("/lectures/{lecture_id}/topics", response_model=LectureOut)
+async def set_topics(
+    lecture_id: int,
+    payload: LectureTopicsIn,
+    _admin: VerifiedTmaUser = Depends(require_admin),
+    repo: Repository = Depends(get_repo),
+) -> LectureOut:
+    ok = await repo.set_topics(lecture_id, payload.topics)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lecture not found")
 

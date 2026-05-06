@@ -6,10 +6,17 @@ from fastapi import APIRouter, Depends
 
 from bot.db.models import ClickEventType, LectureFormat
 from bot.db.repository import Repository
+from bot.services.program import build_program_payload
 from bot.text_store import t
 from bot.web.auth import VerifiedTmaUser
 from bot.web.deps import get_current_user, get_repo
-from bot.web.schemas import UserActionOut, UserLectureOut, UserRegistrationOut, UserStaticOut
+from bot.web.schemas import (
+    UserActionOut,
+    UserLectureOut,
+    UserMaterialsLectureOut,
+    UserRegistrationOut,
+    UserStaticOut,
+)
 
 router = APIRouter(prefix="/api/user", tags=["user"])
 
@@ -42,13 +49,12 @@ async def get_user_lectures(
     lectures = await repo.list_lectures()
     registrations = await repo.get_user_registrations(current_user.tg_user_id)
     registered_lecture_ids = {lecture.id for _, lecture in registrations}
-    now = datetime.now(timezone.utc)
 
     result: list[UserLectureOut] = []
     for lecture in lectures:
-        scheduled_at = _to_aware(lecture.scheduled_at)
-        if not lecture.registration_open and scheduled_at < now:
+        if not lecture.registration_open:
             continue
+        scheduled_at = _to_aware(lecture.scheduled_at)
 
         result.append(
             UserLectureOut(
@@ -65,6 +71,26 @@ async def get_user_lectures(
             )
         )
     return result
+
+
+@router.get("/materials/lectures", response_model=list[UserMaterialsLectureOut])
+async def get_materials_lectures(
+    _current_user: VerifiedTmaUser = Depends(get_user_or_403),
+    repo: Repository = Depends(get_repo),
+) -> list[UserMaterialsLectureOut]:
+    lectures = await repo.list_lectures()
+    rows = [
+        UserMaterialsLectureOut(
+            lecture_id=lecture.id,
+            lecture_number=lecture.number,
+            lecture_title=lecture.title,
+            scheduled_at=_to_aware(lecture.scheduled_at),
+            has_materials=bool(lecture.materials_url),
+        )
+        for lecture in lectures
+        if lecture.materials_url
+    ]
+    return sorted(rows, key=lambda row: row.lecture_number)
 
 
 @router.post("/lectures/{lecture_id}/register", response_model=UserActionOut)
@@ -213,8 +239,15 @@ async def get_user_registrations(
 @router.get("/static", response_model=UserStaticOut)
 async def get_user_static(
     _current_user: VerifiedTmaUser = Depends(get_user_or_403),
+    repo: Repository = Depends(get_repo),
 ) -> UserStaticOut:
+    lectures = await repo.list_lectures()
+    program_header, program_lectures = build_program_payload(
+        header=t("menu", "program_header"),
+        lectures=lectures,
+    )
     return UserStaticOut(
-        program_text=t("menu", "program_text"),
+        program_header=program_header,
+        program_lectures=program_lectures,
         contact_text=t("contact", "text"),
     )

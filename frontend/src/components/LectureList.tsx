@@ -7,6 +7,7 @@ type Props = {
   onToggleRegistration: (lectureId: number, next: boolean) => Promise<void>;
   onSaveMaterials: (lectureId: number, materialsUrl: string | null) => Promise<void>;
   onSaveStream: (lectureId: number, streamUrl: string | null) => Promise<void>;
+  onSaveTopics: (lectureId: number, topics: string | null) => Promise<void>;
   onSelectForRegistrations: (lectureId: number) => void;
 };
 
@@ -15,10 +16,12 @@ export function LectureList({
   onToggleRegistration,
   onSaveMaterials,
   onSaveStream,
+  onSaveTopics,
   onSelectForRegistrations,
 }: Props): JSX.Element {
   const [materialsDraft, setMaterialsDraft] = useState<Record<number, string>>({});
   const [streamDraft, setStreamDraft] = useState<Record<number, string>>({});
+  const [topicsDraft, setTopicsDraft] = useState<Record<number, string>>({});
 
   if (!lectures.length) {
     return <div className="card">Лекций пока нет.</div>;
@@ -35,7 +38,10 @@ export function LectureList({
           <div>Дата: {new Date(lecture.scheduled_at).toLocaleString()}</div>
           <div>Формат: {lecture.format}</div>
           <div className="row" style={{ marginTop: 8 }}>
-            <button onClick={() => void onToggleRegistration(lecture.id, !lecture.registration_open)}>
+            <button
+              className={lecture.registration_open ? 'secondary' : undefined}
+              onClick={() => void onToggleRegistration(lecture.id, !lecture.registration_open)}
+            >
               {lecture.registration_open ? 'Закрыть регистрацию' : 'Открыть регистрацию'}
             </button>
             <button className="secondary" onClick={() => onSelectForRegistrations(lecture.id)}>
@@ -89,6 +95,35 @@ export function LectureList({
                 }
               >
                 Сохранить
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 8 }}>
+            <label>Темы программы (1 строка = 1 тема)</label>
+            <div>
+              <textarea
+                rows={5}
+                style={{ width: '100%' }}
+                value={topicsDraft[lecture.id] ?? lecture.topics ?? ''}
+                onChange={(e) =>
+                  setTopicsDraft((prev) => ({
+                    ...prev,
+                    [lecture.id]: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="row">
+              <button
+                onClick={() =>
+                  void onSaveTopics(
+                    lecture.id,
+                    (topicsDraft[lecture.id] ?? lecture.topics ?? '').trim() || null,
+                  )
+                }
+              >
+                Сохранить темы
               </button>
             </div>
           </div>

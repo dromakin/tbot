@@ -10,11 +10,13 @@ export type LectureOut = {
   number: number;
   title: string;
   description: string | null;
+  topics: string | null;
   scheduled_at: string;
   format: 'online' | 'offline';
   stream_url: string | null;
   materials_url: string | null;
   registration_open: boolean;
+  registration_opened_at: string | null;
 };
 
 export type StatsRowOut = {
@@ -161,6 +163,7 @@ export type LectureCreateIn = {
   number: number;
   title: string;
   description: string;
+  topics: string | null;
   scheduled_at: string;
   format: 'online' | 'offline';
   stream_url: string | null;
@@ -172,12 +175,24 @@ export type LectureStreamIn = {
   stream_url: string | null;
 };
 
+export type LectureTopicsIn = {
+  topics: string | null;
+};
+
 export type GeneralMaterialsSettingOut = {
   url: string | null;
 };
 
 export type GeneralMaterialsSettingIn = {
   url: string | null;
+};
+
+export type AutoCloseHoursOut = {
+  hours: number;
+};
+
+export type AutoCloseHoursIn = {
+  hours: number;
 };
 
 export type UserLectureOut = {
@@ -191,6 +206,14 @@ export type UserLectureOut = {
   is_registered: boolean;
   has_materials: boolean;
   has_stream: boolean;
+};
+
+export type UserMaterialsLectureOut = {
+  lecture_id: number;
+  lecture_number: number;
+  lecture_title: string;
+  scheduled_at: string;
+  has_materials: boolean;
 };
 
 export type UserRegistrationOut = {
@@ -217,6 +240,11 @@ export type UserActionOut = {
 };
 
 export type UserStaticOut = {
-  program_text: string;
+  program_header: string;
+  program_lectures: {
+    number: number;
+    title: string;
+    topics: string[];
+  }[];
   contact_text: string;
 };

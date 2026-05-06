@@ -2,7 +2,7 @@ from bot.text_store import t
 
 START_TEXT = t("start", "start_text")
 MENU_TEXT = t("start", "menu_text")
-PROGRAM_TEXT = t("menu", "program_text")
+PROGRAM_TEXT = t("menu", "program_header")
 MATERIALS_TEXT = t("materials", "intro")
 CONTACT_TEXT = t("contact", "text")
 SCHEDULE_EMPTY_TEXT = t("schedule", "empty")

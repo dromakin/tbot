@@ -25,4 +25,8 @@ async def test_repository_app_settings_roundtrip() -> None:
         await repo.set_general_materials_url("   ")
         assert await repo.get_general_materials_url() is None
 
+        assert await repo.get_auto_close_hours() == 24
+        await repo.set_auto_close_hours(48)
+        assert await repo.get_auto_close_hours() == 48
+
     await engine.dispose()

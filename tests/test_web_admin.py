@@ -88,6 +88,7 @@ async def test_web_api_me_and_lectures_flow() -> None:
             "number": 999,
             "title": "Mini App Lecture",
             "description": "Created from API",
+            "topics": "1. Topic one\n2. Topic two",
             "scheduled_at": "2026-12-01T10:00:00+00:00",
             "format": "online",
             "stream_url": "https://telemost.yandex.ru/j/example",
@@ -110,6 +111,57 @@ async def test_web_api_me_and_lectures_flow() -> None:
         )
         assert patched_stream.status_code == 200
         assert patched_stream.json()["stream_url"] == "https://example.com/new-stream"
+
+        patched_topics = await client.patch(
+            f"/api/lectures/{lecture_id}/topics",
+            headers=admin_header,
+            json={"topics": "1. Updated topic"},
+        )
+        assert patched_topics.status_code == 200
+        assert patched_topics.json()["topics"] == "1. Updated topic"
+
+        close_registration = await client.patch(
+            f"/api/lectures/{lecture_id}/registration",
+            headers=admin_header,
+            json={"open": False},
+        )
+        assert close_registration.status_code == 200
+        assert close_registration.json()["registration_open"] is False
+
+        open_registration = await client.patch(
+            f"/api/lectures/{lecture_id}/registration",
+            headers=admin_header,
+            json={"open": True},
+        )
+        assert open_registration.status_code == 200
+        assert open_registration.json()["registration_open"] is True
+        assert open_registration.json()["registration_opened_at"] is not None
+
+        auto_close_default = await client.get("/api/settings/auto-close-hours", headers=admin_header)
+        assert auto_close_default.status_code == 200
+        assert auto_close_default.json()["hours"] == 24
+
+        auto_close_updated = await client.put(
+            "/api/settings/auto-close-hours",
+            headers=admin_header,
+            json={"hours": 72},
+        )
+        assert auto_close_updated.status_code == 200
+        assert auto_close_updated.json()["hours"] == 72
+
+        auto_close_invalid_low = await client.put(
+            "/api/settings/auto-close-hours",
+            headers=admin_header,
+            json={"hours": -1},
+        )
+        assert auto_close_invalid_low.status_code == 422
+
+        auto_close_invalid_high = await client.put(
+            "/api/settings/auto-close-hours",
+            headers=admin_header,
+            json={"hours": 8761},
+        )
+        assert auto_close_invalid_high.status_code == 422
 
         forbidden = await client.get("/api/lectures", headers=user_header)
         assert forbidden.status_code == 403
